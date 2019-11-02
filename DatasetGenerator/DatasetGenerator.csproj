@@ -5,4 +5,8 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="BitMiracle.Docotic.Pdf" Version="5.10.9960-dev" />
+  </ItemGroup>
+
 </Project>
