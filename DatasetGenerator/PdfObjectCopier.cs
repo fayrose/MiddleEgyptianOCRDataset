@@ -1,9 +1,8 @@
 ﻿using BitMiracle.Docotic.Pdf;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Text;
+using System.Linq;
 
 namespace DatasetGenerator
 {
@@ -12,67 +11,72 @@ namespace DatasetGenerator
         readonly PdfPage Page;
         readonly int PageIndex;
         readonly PdfDocument SourceDocument;
-        readonly List<LineCoordinates> LineInformation;
+        readonly LineCoordinates[] LineInformation;
         readonly string OutputDestination;
 
-        public PdfObjectCopier(PdfDocument pdf, int pageIdx, List<LineCoordinates> lines, string outDir)
+        public PdfObjectCopier(PdfDocument pdf, int pageIdx, IEnumerable<LineCoordinates> lines, string outDir)
         {
             PageIndex = pageIdx;
             SourceDocument = pdf;
             Page = pdf.GetPage(pageIdx);
-            LineInformation = lines;
+            LineInformation = lines.ToArray();
             OutputDestination = outDir;
         }
 
         public void GenerateCroppedPage()
         {
-            for (int i = 0; i < LineInformation.Count; i++)
-            {
-                string outputName = "page" + PageIndex.ToString() + "_" + i.ToString() + ".pdf";
-                GenerateCroppedLine(LineInformation[i], outputName);
-            }
-        }
+            string oneIndexedPageStr = (PageIndex + 1).ToString();
+            string outputName = "page" + oneIndexedPageStr + "Aug.pdf";
 
-        private void GenerateCroppedLine(LineCoordinates line, string outPath)
-        {
+            Console.WriteLine("Processing Page " + oneIndexedPageStr + "...");
+
             using (PdfDocument copyDoc = SourceDocument.CopyPages(new PdfPage[] { Page }))
             {
-                PdfPage sourcePage = copyDoc.Pages[0];
-                PdfPage copyPage = copyDoc.AddPage();
-
-                copyPage.Rotation = sourcePage.Rotation;
-                copyPage.MediaBox = sourcePage.MediaBox;
-
-                copyPage.CropBox = new PdfBox(0, line.LineBottom, Page.Width, line.LineTop);
-
-                PdfCanvas target = copyPage.Canvas;
-
-                foreach (PdfPageObject obj in sourcePage.GetObjects())
+                for (int i = 0; i < LineInformation.Length; i++)
                 {
-                    target.SaveState();
-                    setClipRegion(target, obj.ClipRegion);
-
-                    switch (obj.Type)
-                    {
-                        case PdfPageObjectType.Path:
-                            PathHandler(obj, target);
-                            break;
-                        case PdfPageObjectType.Image:
-                            ImageHandler(obj, target);
-                            break;
-                        case PdfPageObjectType.Text:
-                            TextHandler(obj, target, copyDoc);
-                            break;
-                    }
-
-                    target.RestoreState();
+                    if (PageIndex == 2567 && i == 11) break;
+                    GenerateCroppedLine(LineInformation[i], copyDoc);
                 }
                 copyDoc.RemovePage(0);
-                copyDoc.Save(Path.Combine(OutputDestination, outPath));
+                copyDoc.Save(Path.Combine(OutputDestination, outputName));
             }
         }
 
-        private void PathHandler(PdfPageObject obj, PdfCanvas target)
+        private void GenerateCroppedLine(LineCoordinates line, PdfDocument copyDoc)
+        {
+            PdfPage sourcePage = copyDoc.Pages[0];
+            PdfPage copyPage = copyDoc.AddPage();
+
+            copyPage.Rotation = sourcePage.Rotation;
+            copyPage.MediaBox = sourcePage.MediaBox;
+
+            copyPage.CropBox = new PdfBox(0, line.LineTop, Page.Width, line.LineBottom);
+
+            PdfCanvas target = copyPage.Canvas;
+
+            foreach (PdfPageObject obj in sourcePage.GetObjects())
+            {
+                target.SaveState();
+                setClipRegion(target, obj.ClipRegion);
+                
+                switch (obj.Type)
+                {
+                    case PdfPageObjectType.Path:
+                        PathHandler(obj, target, line);
+                        break;
+                    case PdfPageObjectType.Image:
+                        ImageHandler(obj, target, line);
+                        break;
+                    case PdfPageObjectType.Text:
+                        TextHandler(obj, target, copyDoc, line);
+                        break;
+                }
+
+                target.RestoreState();
+            }
+        }
+
+        private void PathHandler(PdfPageObject obj, PdfCanvas target, LineCoordinates line)
         {
             var path = (PdfPath)obj;
             target.Transform(path.TransformationMatrix);
@@ -85,20 +89,24 @@ namespace DatasetGenerator
             drawPath(target, path);
         }
 
-        private void ImageHandler(PdfPageObject obj, PdfCanvas target)
+        private void ImageHandler(PdfPageObject obj, PdfCanvas target, LineCoordinates line)
         {
             var image = (PdfPaintedImage) obj;
-            target.TranslateTransform(image.Position.X, image.Position.Y);
-            target.Transform(image.TransformationMatrix);
+            var invertedPosition = Page.Height - image.Position.Y;
+            if (invertedPosition > line.LineBottom && invertedPosition < line.LineTop)
+            {
+                target.TranslateTransform(image.Position.X, image.Position.Y);
+                target.Transform(image.TransformationMatrix);
 
-            setBrush(target.Brush, image.Brush);
-            target.DrawImage(image.Image, 0, 0, 0);
+                setBrush(target.Brush, image.Brush);
+                target.DrawImage(image.Image, 0, 0, 0);
+            }
         }
 
-        private void TextHandler(PdfPageObject obj, PdfCanvas target, PdfDocument copy)
+        private void TextHandler(PdfPageObject obj, PdfCanvas target, PdfDocument copy, LineCoordinates line)
         {
             var text = (PdfTextData)obj;
-            drawText(target, text, copy);
+            drawText(target, text, copy, line);
         }
 
         private void setClipRegion(PdfCanvas canvas, PdfClipRegion clipRegion)
@@ -221,19 +229,23 @@ namespace DatasetGenerator
             }
         }
 
-        private void drawText(PdfCanvas target, PdfTextData text, PdfDocument pdf)
+        private void drawText(PdfCanvas target, PdfTextData text, PdfDocument pdf, LineCoordinates line)
         {
-            target.TextRenderingMode = text.RenderingMode;
-            setBrush(target.Brush, text.Brush);
-            setPen(target.Pen, text.Pen);
+            var invertedPosition = Page.Height - text.Position.Y;
+            if (invertedPosition > line.LineBottom && invertedPosition < line.LineTop)
+            {
+                target.TextRenderingMode = text.RenderingMode;
+                setBrush(target.Brush, text.Brush);
+                setPen(target.Pen, text.Pen);
 
-            target.TextPosition = PdfPoint.Empty;
-            target.FontSize = text.FontSize;
-            target.Font = text.Font;
-            target.TranslateTransform(text.Position.X, text.Position.Y);
-            target.Transform(text.TransformationMatrix);
+                target.TextPosition = PdfPoint.Empty;
+                target.FontSize = text.FontSize;
+                target.Font = text.Font;
+                target.TranslateTransform(text.Position.X, text.Position.Y);
+                target.Transform(text.TransformationMatrix);
 
-            target.DrawString(text.GetCharacterCodes());
+                target.DrawString(text.GetCharacterCodes());
+            }
         }
     }
 }
