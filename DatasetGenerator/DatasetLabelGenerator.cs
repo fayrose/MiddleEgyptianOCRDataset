@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Linq;
+using System.Diagnostics;
 
 namespace DatasetGenerator
 {
@@ -27,8 +29,9 @@ namespace DatasetGenerator
                 using (var page = new PdfDocument(fileStr))
                 {
                     var pageData = ParsePage(page, pageNum);
+                    pageData.FileLocation = fileStr;
 
-                    var metrics = RectangleCreator.GetLineMetrics(page, pageNum);
+                    var metrics = RectangleCreator.GetMetricsOfSplit(page);
                     for (int i = 0; i < pageData.EntryData.Length; i++)
                     {
                         pageData.EntryData[i].Coordinates = metrics[i];
@@ -47,7 +50,7 @@ namespace DatasetGenerator
         /// <returns></returns>
         private int GetPageNumberFromFileName(string fileName)
         {   
-            int indexOfPeriod = fileName.IndexOf('.');
+            int indexOfPeriod = fileName.IndexOf("Aug");
             // Each file prepended with "page" so skip to 4th char for substring
             int endOfPagePrefix = fileName.IndexOf("page") + 4;
             int length = indexOfPeriod - endOfPagePrefix;
@@ -57,73 +60,70 @@ namespace DatasetGenerator
 
         private PageData ParsePage(PdfDocument page, int pageNum)
         {
-            int imageIndex = 0;
             List<EntryData> entryList = new List<EntryData>();
-            // Only need to pass in first entry, as all entries contain all text & images
-            var gardinerList = GetGardinersOnPage(page.Pages[0]);
-            var imageList = page.Pages[0].GetPaintedImages();
 
             for (int i = 0; i < page.Pages.Count; i++)
             {
+                var gardinerList = GetGardinersOnPage(page.Pages[i]);
+                var imageList = page.Pages[i].GetPaintedImages();
                 var entryData = new EntryData()
                 {
                     EntryPdf = page.Pages[i],
-                    GardinerSigns = gardinerList[i].Split(" - "),
+                    GardinerSigns = gardinerList.Split(new string[] { " - ", "-" }, StringSplitOptions.RemoveEmptyEntries),
                     EntryIndexInFile = i,
                 };
-
-                List<PdfRectangle> BoundList = new List<PdfRectangle>();
-                for (int j = 0; j < entryData.GardinerSigns.Length; j++)
-                {
-                    var idxToGet = imageIndex + j;
-                    var image = imageList.GetAt(idxToGet);
-                    BoundList.Add(image.Bounds);
-                }
-                entryData.ImageBounds = BoundList.ToArray();
+                
+                entryData.ImageBounds = FixDifferentLengthLists(entryData.GardinerSigns, imageList);
                 entryList.Add(entryData);
-                imageIndex += entryData.GardinerSigns.Length;
             }
 
-            return new PageData() { EntryData = entryList.ToArray(), PageNumber = pageNum, FileLocation = "page" + pageNum.ToString() + ".pdf" };
+            return new PageData() { EntryData = entryList.ToArray(), PageNumber = pageNum };
         }
 
-        private List<string> GetGardinersOnPage(PdfPage page)
+        private PdfRectangle[] FixDifferentLengthLists(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList)
         {
-            List<string> gardinerList = new List<string>();
+            List<PdfRectangle> BoundList = new List<PdfRectangle>();
+            if (gardinerSigns.Length != imageList.Count)
+            {
+                /*var avgY = imageList.Select(x => x.Position.Y).Average();
+                for (int k = 0; k < imageList.Count; k++)
+                {
+                    double yPos = imageList.GetAt(k).Position.Y;
+                    if (yPos > avgY - 13 && yPos < avgY + 16)
+                    {
+                        BoundList.Add(imageList.GetAt(k).Bounds);
+                    }
+                }*/ // TODO
+                Debug.Assert(BoundList.Count == gardinerSigns.Length);
+            }
+            else
+            {
+                for (int j = 0; j < gardinerSigns.Length; j++)
+                {
+                    var image = imageList.GetAt(j);
+                    BoundList.Add(image.Bounds);
+                }
+            }
+            return BoundList.ToArray();
+        }
+
+        private string GetGardinersOnPage(PdfPage page)
+        {
             char[] startOfGardinerMarkers = new char[] { ']', '}', ')', '?' };
 
             var lineArr = page.GetText()
                               .Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+            
+            var text = lineArr[0];
+            int closingBraceIdx = text.LastIndexOfAny(startOfGardinerMarkers);
+            int multispaceIdx = text.LastIndexOf("   ");
+            int doubleIdx = text.LastIndexOf("  ");
+            
+            // Get max of three values
+            int max = Math.Max(Math.Max(closingBraceIdx + 1, multispaceIdx), doubleIdx);
 
-            // Don't iterate over the last line, as it's the page #
-            for (int i = 0; i < lineArr.Length; i++)
-            {
-                string gardiner;
-                int closingBraceIdx = lineArr[i].LastIndexOfAny(startOfGardinerMarkers);
-                int multispaceIdx = lineArr[i].LastIndexOf("   ");
-                int doubleIdx = lineArr[i].LastIndexOf("  ");
-
-                if (i == lineArr.Length - 1 && int.TryParse(lineArr[i], out _))
-                {
-                    break;
-                }
-                else if (i == lineArr.Length - 1)
-                {
-                    int pageNumIdx = Math.Max(multispaceIdx, doubleIdx);
-                    lineArr[i] = lineArr[i].Substring(0, pageNumIdx);
-                    multispaceIdx = lineArr[i].LastIndexOf("   ");
-                    doubleIdx = lineArr[i].LastIndexOf("  ");
-                }
-
-                // Get max of three values
-                int max = Math.Max(Math.Max(closingBraceIdx + 1, multispaceIdx), doubleIdx);
-
-                // Take substring of after
-                gardiner = lineArr[i].Substring(max).Trim();
-                
-                gardinerList.Add(gardiner.Trim());
-            }
-            return gardinerList;
+            // Take substring of after
+            return text.Substring(max).Trim();
         }
     }
 }

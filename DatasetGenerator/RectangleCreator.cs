@@ -16,6 +16,22 @@ namespace DatasetGenerator
             return GetTopAndBottomAroundLines(lineYs, lineDiffs).ToArray();
         }
 
+        public static LineCoordinates[] GetMetricsOfSplit(PdfDocument Pdf)
+        {
+            List<LineCoordinates> lineList = new List<LineCoordinates>();
+            foreach (var entry in Pdf.Pages)
+            {
+                var cropBox = entry.CropBox;
+                lineList.Add(new LineCoordinates()
+                {
+                    LineBottom = cropBox.Bottom,
+                    LineTop = cropBox.Top,
+                    LineHeight = cropBox.Height
+                });
+            }
+            return lineList.ToArray();
+        }
+
 
         private static List<LineCoordinates> GetTopAndBottomAroundLines(List<double> lineYs, List<double> lineDiffs)
         {

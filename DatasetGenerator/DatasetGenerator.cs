@@ -40,11 +40,11 @@ namespace DatasetGenerator
             var inLocation = @"C:\Users\lfr2l\U of T\NML340\VYGUS_Dictionary_2018.pdf";
             var outLocation = @"C:\Users\lfr2l\U of T\CSC420\project\dataset\aug_output\";
             
-            DatasetGenerator dg = new DatasetGenerator(inLocation, outLocation);
-            dg.ParsePdf();
+            //DatasetGenerator dg = new DatasetGenerator(inLocation, outLocation);
+            //dg.ParsePdf();
 
-            //var dlg = new DatasetLabelGenerator(outLocation);
-            //dlg.ParseAllFiles();
+            var dlg = new DatasetLabelGenerator(outLocation);
+            dlg.ParseAllFiles();
         }
     }
 }
