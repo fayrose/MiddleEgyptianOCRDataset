@@ -24,7 +24,6 @@ namespace DatasetGenerator
             foreach (var fileStr in fileNames)
             {
                 int pageNum = GetPageNumberFromFileName(fileStr);
-                Console.WriteLine("Processing page #" + pageNum.ToString() + "...");
 
                 using (var page = new PdfDocument(fileStr))
                 {
@@ -73,19 +72,19 @@ namespace DatasetGenerator
                     EntryIndexInFile = i,
                 };
                 
-                entryData.ImageBounds = GenerateBoundList(entryData.GardinerSigns, imageList);
+                entryData.ImageBounds = GenerateBoundList(entryData.GardinerSigns, imageList, page.Pages[i], pageNum);
                 entryList.Add(entryData);
             }
 
             return new PageData() { EntryData = entryList.ToArray(), PageNumber = pageNum };
         }
 
-        private PdfRectangle[] GenerateBoundList(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList)
+        private PdfRectangle[] GenerateBoundList(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage entry, int pageNum)
         {
             List<PdfRectangle> BoundList = new List<PdfRectangle>();
             if (gardinerSigns.Length != imageList.Count)
             {
-                BoundList = FixDifferentLengthLists(gardinerSigns, imageList);
+                BoundList = FixDifferentLengthLists(gardinerSigns, imageList, entry, pageNum);
                 Debug.Assert(BoundList.Count == gardinerSigns.Length);
             }
             else
@@ -99,18 +98,34 @@ namespace DatasetGenerator
             return BoundList.ToArray();
         }
 
-        private List<PdfRectangle> FixDifferentLengthLists(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList)
+        private List<PdfRectangle> FixDifferentLengthLists(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage page, int pageNum)
         {
-            /*var avgY = imageList.Select(x => x.Position.Y).Average();
-                for (int k = 0; k < imageList.Count; k++)
-                {
-                    double yPos = imageList.GetAt(k).Position.Y;
-                    if (yPos > avgY - 13 && yPos < avgY + 16)
-                    {
-                        BoundList.Add(imageList.GetAt(k).Bounds);
-                    }
-                }*/ // TODO
-            return null;
+            // Case: Length imageList = 2, gardinerSigns = 1
+            // Case: Length imageList = gardinerSigns Length + 1
+            List<PdfRectangle> boundList = imageList.Select(x => x.Bounds).ToList();
+            var coords = page.CropBox;
+            var centerOfEntry = page.Height - (coords.Location.Y + (coords.Height / 2));
+            var allYValuesOfImages = imageList.Select(x => x.Position.Y).ToArray();
+            double stdDev = Stat.StdDev(allYValuesOfImages);
+
+            var comparedYValues = allYValuesOfImages.Select(x => Math.Abs(x - centerOfEntry) / stdDev).ToList();
+            
+            while (boundList.Count > gardinerSigns.Length)
+            {
+                var comparedMax = comparedYValues.Max();
+                var maxIdx = comparedYValues.IndexOf(comparedMax);
+                comparedYValues.RemoveAt(maxIdx);
+                boundList.RemoveAt(maxIdx);
+            }
+            try
+            {
+                Debug.Assert(boundList.Count == gardinerSigns.Length);
+            }
+            catch
+            {
+                Console.WriteLine(pageNum);
+            }
+            return boundList;
         }
 
         private string GetGardinersOnPage(PdfPage page)
