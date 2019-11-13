@@ -73,27 +73,19 @@ namespace DatasetGenerator
                     EntryIndexInFile = i,
                 };
                 
-                entryData.ImageBounds = FixDifferentLengthLists(entryData.GardinerSigns, imageList);
+                entryData.ImageBounds = GenerateBoundList(entryData.GardinerSigns, imageList);
                 entryList.Add(entryData);
             }
 
             return new PageData() { EntryData = entryList.ToArray(), PageNumber = pageNum };
         }
 
-        private PdfRectangle[] FixDifferentLengthLists(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList)
+        private PdfRectangle[] GenerateBoundList(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList)
         {
             List<PdfRectangle> BoundList = new List<PdfRectangle>();
             if (gardinerSigns.Length != imageList.Count)
             {
-                /*var avgY = imageList.Select(x => x.Position.Y).Average();
-                for (int k = 0; k < imageList.Count; k++)
-                {
-                    double yPos = imageList.GetAt(k).Position.Y;
-                    if (yPos > avgY - 13 && yPos < avgY + 16)
-                    {
-                        BoundList.Add(imageList.GetAt(k).Bounds);
-                    }
-                }*/ // TODO
+                BoundList = FixDifferentLengthLists(gardinerSigns, imageList);
                 Debug.Assert(BoundList.Count == gardinerSigns.Length);
             }
             else
@@ -105,6 +97,20 @@ namespace DatasetGenerator
                 }
             }
             return BoundList.ToArray();
+        }
+
+        private List<PdfRectangle> FixDifferentLengthLists(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList)
+        {
+            /*var avgY = imageList.Select(x => x.Position.Y).Average();
+                for (int k = 0; k < imageList.Count; k++)
+                {
+                    double yPos = imageList.GetAt(k).Position.Y;
+                    if (yPos > avgY - 13 && yPos < avgY + 16)
+                    {
+                        BoundList.Add(imageList.GetAt(k).Bounds);
+                    }
+                }*/ // TODO
+            return null;
         }
 
         private string GetGardinersOnPage(PdfPage page)
