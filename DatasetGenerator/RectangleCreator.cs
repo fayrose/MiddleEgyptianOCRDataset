@@ -44,11 +44,11 @@ namespace DatasetGenerator
 
                 var bottomBuff = bottomDiff * (0.75);
                 var topBuff = topDiff * (0.5);
-
+                
                 LineCoordinates coords = new LineCoordinates
                 {
                     TextHeight = lineYs[i],
-                    LineBottom = lineYs[i] - bottomBuff,
+                    LineBottom = (i == lineYs.Count - 1) ? 0 : lineYs[i] - bottomBuff,
                     LineTop = lineYs[i] + topBuff,
                     LineHeight = topBuff + bottomBuff
                 };
