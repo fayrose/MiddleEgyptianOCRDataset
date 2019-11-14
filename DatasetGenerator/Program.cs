@@ -16,7 +16,7 @@ namespace DatasetGenerator
             var outPath = @"C:\Users\lfr2l\U of T\CSC420\project\dataset\character_images";
             var dataPath = @"C:\Users\lfr2l\U of T\CSC420\project\dataset\aug_output";
             CharacterDatasetGenerator cdg = new CharacterDatasetGenerator(inLocation, outPath);
-            cdg.GetNamesFromSplitPdfs(dataPath);
+            //cdg.GetNamesFromSplitPdfs(OUTPUT_FROM_LABEL_GEN);
         }
     }
 }

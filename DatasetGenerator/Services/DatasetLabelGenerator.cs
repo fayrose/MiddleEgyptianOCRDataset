@@ -141,8 +141,6 @@ namespace DatasetGenerator
 
         private List<PdfRectangle> FixDifferentLengthLists(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage page, int pageNum)
         {
-            // Case: Length imageList = 2, gardinerSigns = 1
-            // Case: Length imageList = gardinerSigns Length + 1
             List<PdfRectangle> boundList = imageList.Select(x => x.Bounds).ToList();
             var coords = page.CropBox;
             var centerOfEntry = page.Height - (coords.Location.Y + (coords.Height / 2));
@@ -157,14 +155,6 @@ namespace DatasetGenerator
                 var maxIdx = comparedYValues.IndexOf(comparedMax);
                 comparedYValues.RemoveAt(maxIdx);
                 boundList.RemoveAt(maxIdx);
-            }
-            try
-            {
-                Debug.Assert(boundList.Count == gardinerSigns.Length);
-            }
-            catch
-            {
-                Console.WriteLine(pageNum);
             }
             return boundList;
         }
