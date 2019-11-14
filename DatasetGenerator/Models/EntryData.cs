@@ -13,6 +13,7 @@ namespace DatasetGenerator
         public PdfRectangle[] ImageBounds { get; internal set; }
         public PdfPage EntryPdf { get; internal set; }
         public int EntryIndexInFile { get; internal set; }
+        public PdfPaintedImage[] GlyphImages { get; internal set; }
         //public Bitmap EntryImage { get; internal set; }
     }
 }
