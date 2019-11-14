@@ -27,19 +27,17 @@ namespace DatasetGenerator
                 int pageNum = GetPageNumberFromFileName(fileStr);
                 Console.WriteLine("Processing page #" + pageNum.ToString() + "...");
 
-                using (var page = new PdfDocument(fileStr))
+                using var page = new PdfDocument(fileStr);
+                var pageData = ParsePage(page, pageNum);
+                pageData.FileLocation = fileStr;
+
+                var metrics = RectangleCreator.GetMetricsOfSplit(page);
+                for (int i = 0; i < pageData.EntryData.Length; i++)
                 {
-                    var pageData = ParsePage(page, pageNum);
-                    pageData.FileLocation = fileStr;
-
-                    var metrics = RectangleCreator.GetMetricsOfSplit(page);
-                    for (int i = 0; i < pageData.EntryData.Length; i++)
-                    {
-                        pageData.EntryData[i].Coordinates = metrics[i];
-                    }
-
-                    allEntryBounds.Add(pageData);
+                    pageData.EntryData[i].Coordinates = metrics[i];
                 }
+
+                allEntryBounds.Add(pageData);
             }
             return new DictionaryData() { Pages = allEntryBounds.ToImmutableArray() } ;
         }

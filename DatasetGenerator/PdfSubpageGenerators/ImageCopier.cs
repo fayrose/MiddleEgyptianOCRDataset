@@ -21,41 +21,37 @@ namespace DatasetGenerator
 
         private void GenerateLineImage(LineCoordinates coords, string outPath)
         {
-            using (Bitmap bm = new Bitmap((int)Page.Width, (int)Page.Height))
+            using Bitmap bm = new Bitmap((int)Page.Width, (int)Page.Height);
+            bm.SetResolution(Page.Canvas.Resolution, Page.Canvas.Resolution);
+
+            using var graphics = Graphics.FromImage(bm);
+            graphics.SmoothingMode = SmoothingMode.HighQuality;
+            graphics.PageUnit = GraphicsUnit.Point;
+
+            var clipBox = new RectangleF((float)0.0, (float)coords.LineTop, (float)Page.Width, (float)coords.LineHeight);
+
+            //Page.CropBox = new PdfBox(0, coords.LineBottom, Page.Width, coords.LineTop);
+            graphics.SetClip(clipBox, CombineMode.Intersect);
+
+            foreach (PdfPageObject obj in Page.GetObjects())
             {
-                bm.SetResolution(Page.Canvas.Resolution, Page.Canvas.Resolution);
-
-                using (var graphics = Graphics.FromImage(bm))
+                switch (obj.Type)
                 {
-                    graphics.SmoothingMode = SmoothingMode.HighQuality;
-                    graphics.PageUnit = GraphicsUnit.Point;
-
-                    var clipBox = new RectangleF((float)0.0, (float)coords.LineTop, (float)Page.Width, (float)coords.LineHeight);
-
-                    //Page.CropBox = new PdfBox(0, coords.LineBottom, Page.Width, coords.LineTop);
-                    graphics.SetClip(clipBox, CombineMode.Intersect);
-                    
-                    foreach (PdfPageObject obj in Page.GetObjects())
-                    {
-                        switch (obj.Type)
-                        {
-                            case PdfPageObjectType.Text:
-                                drawText(graphics, (PdfTextData)obj);
-                                break;
-                            case PdfPageObjectType.Image:
-                                drawImage(graphics, (PdfPaintedImage)obj);
-                                break;
-                            case PdfPageObjectType.Path:
-                                drawPath(graphics, (PdfPath)obj);
-                                break;
-                            default:
-                                break;
-                        }
-                    }
+                    case PdfPageObjectType.Text:
+                        drawText(graphics, (PdfTextData)obj);
+                        break;
+                    case PdfPageObjectType.Image:
+                        drawImage(graphics, (PdfPaintedImage)obj);
+                        break;
+                    case PdfPageObjectType.Path:
+                        drawPath(graphics, (PdfPath)obj);
+                        break;
+                    default:
+                        break;
                 }
-
-                bm.Save(outPath, ImageFormat.Png);
             }
+
+            bm.Save(outPath, ImageFormat.Png);
         }
 
         private void drawPath(Graphics graphics, PdfPath path)
@@ -65,11 +61,11 @@ namespace DatasetGenerator
             saveStateAndDraw(graphics, path.ClipRegion, () =>
             {
                 concatMatrix(graphics, path.TransformationMatrix);
-                using (var gdiPath = new GraphicsPath())
-                {
-                    toGdiPath(path, gdiPath);
-                    fillStrokePath(graphics, path, gdiPath);
-                }
+                using var gdiPath = new GraphicsPath();
+                
+                toGdiPath(path, gdiPath);
+                fillStrokePath(graphics, path, gdiPath);
+                
             });
         }
 
@@ -81,33 +77,29 @@ namespace DatasetGenerator
 
             if (image.Image.IsMask) return;
 
-            using (var stream = new MemoryStream())
+            using var stream = new MemoryStream();
+            image.Image.Save(stream);
+            using Bitmap bitmap = (Bitmap)Image.FromStream(stream);
+            saveStateAndDraw(graphics, image.ClipRegion, () =>
             {
-                image.Image.Save(stream);
-                using (Bitmap bitmap = (Bitmap)Image.FromStream(stream))
+                graphics.TranslateTransform((float)image.Position.X, (float)image.Position.Y);
+                concatMatrix(graphics, image.TransformationMatrix);
+
+                graphics.PixelOffsetMode = PixelOffsetMode.Half;
+
+                PdfSize imageSize = new PdfSize(image.Image.Width, image.Image.Height);
+                if (imageSize.Width < bitmap.Width && imageSize.Height < bitmap.Height)
                 {
-                    saveStateAndDraw(graphics, image.ClipRegion, () =>
-                    {
-                        graphics.TranslateTransform((float)image.Position.X, (float)image.Position.Y);
-                        concatMatrix(graphics, image.TransformationMatrix);
-
-                        graphics.PixelOffsetMode = PixelOffsetMode.Half;
-
-                        PdfSize imageSize = new PdfSize(image.Image.Width, image.Image.Height);
-                        if (imageSize.Width < bitmap.Width && imageSize.Height < bitmap.Height)
-                        {
-                            InterpolationMode current = graphics.InterpolationMode;
-                            graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                            graphics.DrawImage(bitmap, 0, 0, (float)imageSize.Width, (float)imageSize.Height);
-                            graphics.InterpolationMode = current;
-                        }
-                        else
-                        {
-                            graphics.DrawImage(bitmap, 0, 0, bitmap.Width, bitmap.Height);
-                        }
-                    });
+                    InterpolationMode current = graphics.InterpolationMode;
+                    graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    graphics.DrawImage(bitmap, 0, 0, (float)imageSize.Width, (float)imageSize.Height);
+                    graphics.InterpolationMode = current;
                 }
-            }
+                else
+                {
+                    graphics.DrawImage(bitmap, 0, 0, bitmap.Width, bitmap.Height);
+                }
+            });
         }
 
         private void drawText(Graphics graphics, PdfTextData obj)
@@ -122,16 +114,13 @@ namespace DatasetGenerator
 
             saveStateAndDraw(graphics, obj.ClipRegion, () =>
             {
-                using (Font font = toGdiFont(obj.Font, obj.FontSize))
-                {
-                    using (Brush brush = toGdiBrush(obj.Brush))
-                    {
-                        graphics.TranslateTransform((float)obj.Position.X, (float)obj.Position.Y);
-                        concatMatrix(graphics, obj.TransformationMatrix);
+                using Font font = toGdiFont(obj.Font, obj.FontSize);
+                using Brush brush = toGdiBrush(obj.Brush);
+                    
+                graphics.TranslateTransform((float)obj.Position.X, (float)obj.Position.Y);
+                concatMatrix(graphics, obj.TransformationMatrix);
 
-                        graphics.DrawString(obj.Text, font, brush, PointF.Empty);
-                    }
-                }
+                graphics.DrawString(obj.Text, font, brush, PointF.Empty);
             });
         }
 
@@ -159,14 +148,12 @@ namespace DatasetGenerator
                 graphics.Transform = new Matrix();
                 foreach (PdfPath clipPath in clipRegion.IntersectedPaths)
                 {
-                    using (var gdiPath = new GraphicsPath())
-                    {
-                        toGdiPath(clipPath, gdiPath);
-                        gdiPath.Transform(toGdiMatrix(clipPath.TransformationMatrix));
+                    using var gdiPath = new GraphicsPath();
+                    toGdiPath(clipPath, gdiPath);
+                    gdiPath.Transform(toGdiMatrix(clipPath.TransformationMatrix));
 
-                        gdiPath.FillMode = (FillMode)clipPath.ClipMode.Value;
-                        graphics.SetClip(gdiPath, CombineMode.Intersect);
-                    }
+                    gdiPath.FillMode = (FillMode)clipPath.ClipMode.Value;
+                    graphics.SetClip(gdiPath, CombineMode.Intersect);
                 }
             }
             finally
@@ -227,32 +214,24 @@ namespace DatasetGenerator
             PdfDrawMode paintMode = path.PaintMode.Value;
             if (paintMode == PdfDrawMode.Fill || paintMode == PdfDrawMode.FillAndStroke)
             {
-                using (var brush = toGdiBrush(path.Brush))
-                {
-                    gdiPath.FillMode = (FillMode)path.FillMode.Value;
-                    gr.FillPath(brush, gdiPath);
-                }
+                using var brush = toGdiBrush(path.Brush);
+                gdiPath.FillMode = (FillMode)path.FillMode.Value;
+                gr.FillPath(brush, gdiPath);
             }
 
             if (paintMode == PdfDrawMode.Stroke || paintMode == PdfDrawMode.FillAndStroke)
             {
-                using (var pen = toGdiPen(path.Pen))
-                {
-                    gr.DrawPath(pen, gdiPath);
-                }
+                using var pen = toGdiPen(path.Pen);
+                gr.DrawPath(pen, gdiPath);
             }
         }
 
         private void concatMatrix(Graphics gr, PdfMatrix transformation)
         {
-            using (Matrix m = toGdiMatrix(transformation))
-            {
-                using (Matrix current = gr.Transform)
-                {
-                    current.Multiply(m, MatrixOrder.Prepend);
-                    gr.Transform = current;
-                }
-            }
+            using Matrix m = toGdiMatrix(transformation);
+            using Matrix current = gr.Transform;
+            current.Multiply(m, MatrixOrder.Prepend);
+            gr.Transform = current;
         }
 
         private Matrix toGdiMatrix(PdfMatrix matrix)

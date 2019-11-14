@@ -30,16 +30,14 @@ namespace DatasetGenerator
 
             Console.WriteLine("Processing Page " + oneIndexedPageStr + "...");
 
-            using (PdfDocument copyDoc = SourceDocument.CopyPages(new PdfPage[] { Page }))
+            using PdfDocument copyDoc = SourceDocument.CopyPages(new PdfPage[] { Page });
+            for (int i = 0; i < LineInformation.Length; i++)
             {
-                for (int i = 0; i < LineInformation.Length; i++)
-                {
-                    if (PageIndex == 2567 && i == 11) break;
-                    GenerateCroppedLine(LineInformation[i], copyDoc);
-                }
-                copyDoc.RemovePage(0);
-                copyDoc.Save(Path.Combine(OutputDestination, outputName));
+                if (PageIndex == 2567 && i == 11) break;
+                GenerateCroppedLine(LineInformation[i], copyDoc);
             }
+            copyDoc.RemovePage(0);
+            copyDoc.Save(Path.Combine(OutputDestination, outputName));
         }
 
         private void GenerateCroppedLine(LineCoordinates line, PdfDocument copyDoc)
