@@ -15,3 +15,10 @@ In order to create the labels for ML, run:
 var dlg = new DatasetLabelGenerator(DIRECTORY_OF_SPLIT_FILES);
 dlg.ParseAllFiles();
 ```
+
+In order to create the dataset of characters for training, run:
+
+```c#
+CharacterDatasetGenerator cdg = new CharacterDatasetGenerator(LOCATION_OF_VYGUS_2018, DIRECTORY_FOR_OUTPUT_CHARS);
+cdg.GetCharacterFilesFromPdf();
+```

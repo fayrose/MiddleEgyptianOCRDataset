@@ -24,6 +24,7 @@ namespace DatasetGenerator
             foreach (var fileStr in fileNames)
             {
                 int pageNum = GetPageNumberFromFileName(fileStr);
+                Console.WriteLine("Processing page #" + pageNum.ToString() + "...");
 
                 using (var page = new PdfDocument(fileStr))
                 {
