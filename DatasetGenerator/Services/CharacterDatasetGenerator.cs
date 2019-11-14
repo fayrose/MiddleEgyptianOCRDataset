@@ -40,7 +40,7 @@ namespace DatasetGenerator
                 var entriesContainingCharacter = datasetData.SelectMany(x => x.EntryData)
                                                             .Where(x => x.Images.Select(y => y.Image.Id).Contains(id));
                 var gardinersOfEntries = entriesContainingCharacter.Select(x => x.GardinerSigns).ToArray();
-                var intersected = gardinersOfEntries[0];
+                var intersected = gardinersOfEntries[0].ToArray();
                 for (int i = 1; i < gardinersOfEntries.Length; i++)
                 {
                     intersected = intersected.Intersect(gardinersOfEntries[i]).ToArray();
