@@ -1,25 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Runtime.Serialization;
 using BitMiracle.Docotic.Pdf;
 
 namespace DatasetGenerator.Models
 {
+    [DataContract]
     public class GlyphBlock
     {
-        private List<PdfPaintedImage> Images;
+        [DataMember]
+        private List<PdfPaintedImage> Images { get; }
         public GlyphBlock(List<PdfPaintedImage> imgs)
         {
             Images = imgs;
         }
 
-        public void addImage(PdfPaintedImage img)
+        internal void AddImage(PdfPaintedImage img)
         {
             Images.Add(img);
-        }
-
-        public List<PdfPaintedImage> getImages()
-        {
-            return Images;
         }
     }
 }

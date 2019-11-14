@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Diagnostics;
@@ -19,7 +18,7 @@ namespace DatasetGenerator
             FileDirectory = datasetDirectory;
         }
 
-        public PageData[] ParseAllFiles()
+        public DictionaryData ParseAllFiles()
         {
             var allEntryBounds = new List<PageData>();
             string[] fileNames = Directory.GetFiles(FileDirectory);
@@ -42,7 +41,7 @@ namespace DatasetGenerator
                     allEntryBounds.Add(pageData);
                 }
             }
-            return allEntryBounds.ToArray();
+            return new DictionaryData() { Pages = allEntryBounds.ToImmutableArray() } ;
         }
 
         /// <summary>
@@ -105,7 +104,7 @@ namespace DatasetGenerator
                 if (prevImage == null){
                     prevImage = image;
                     curGlyphBlock = new GlyphBlock(new List<PdfPaintedImage>());
-                    curGlyphBlock.addImage(image);
+                    curGlyphBlock.AddImage(image);
                     wordBound = prevImage.Bounds.X + prevImage.Bounds.Width;
                     continue;
                 }
@@ -113,14 +112,14 @@ namespace DatasetGenerator
                 {
                     glyphBlocks.Add(curGlyphBlock);
                     curGlyphBlock = new GlyphBlock(new List<PdfPaintedImage>());
-                    curGlyphBlock.addImage(image);
+                    curGlyphBlock.AddImage(image);
                     double mid = image.Bounds.X - ((image.Bounds.X - wordBound)/2);
                     boundaries.Add(mid);
                     wordBound = image.Bounds.X + image.Bounds.Width;
                 }
                 else
                 {
-                    curGlyphBlock.addImage(image);
+                    curGlyphBlock.AddImage(image);
                     wordBound = Math.Max(wordBound, image.Bounds.X + image.Bounds.Width);
                 }
                 prevImage = image;
