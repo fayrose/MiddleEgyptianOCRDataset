@@ -259,3 +259,5 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+character_images/page2Aug.pdf
+character_images/page3Aug.pdf

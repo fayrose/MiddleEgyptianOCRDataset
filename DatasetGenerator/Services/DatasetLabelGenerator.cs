@@ -98,11 +98,6 @@ namespace DatasetGenerator
                     wordBound = prevImage.Bounds.X + prevImage.Bounds.Width;
                     continue;
                 }
-                double x = 98.280;
-                if (Math.Abs(image.Bounds.X - x) < 0.5)
-                {
-                    int y = 3;
-                }
                 if (wordBound <= image.Bounds.X || Math.Abs(image.Bounds.X - wordBound) < (wordBound * .00001))
                 {
                     double mid = image.Bounds.X - ((image.Bounds.X - wordBound)/2);
