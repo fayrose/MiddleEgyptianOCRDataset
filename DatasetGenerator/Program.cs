@@ -14,8 +14,9 @@ namespace DatasetGenerator
 
             var inLocation = @"C:\Users\lfr2l\U of T\NML340\VYGUS_Dictionary_2018.pdf";
             var outPath = @"C:\Users\lfr2l\U of T\CSC420\project\dataset\character_images";
+            var dataPath = @"C:\Users\lfr2l\U of T\CSC420\project\dataset\aug_output";
             CharacterDatasetGenerator cdg = new CharacterDatasetGenerator(inLocation, outPath);
-            cdg.GetCharacterFilesFromPdf();
+            cdg.GetNamesFromSplitPdfs(dataPath);
         }
     }
 }
