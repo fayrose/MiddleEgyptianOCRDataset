@@ -74,10 +74,50 @@ namespace DatasetGenerator
                 };
                 
                 entryData.ImageBounds = GenerateBoundList(entryData.GardinerSigns, imageList, page.Pages[i], pageNum);
+                entryData.WordBounds = GenerateWordBounds(imageList);
                 entryList.Add(entryData);
             }
 
             return new PageData() { EntryData = entryList.ToArray(), PageNumber = pageNum };
+        }
+
+        private List<double> GenerateWordBounds(PdfCollection<PdfPaintedImage> imageCollection)
+        {
+
+            List<PdfPaintedImage> imageList = imageCollection.ToList<PdfPaintedImage>();
+            List<PdfPaintedImage> sortedImages = imageList.OrderBy(image => image.Bounds.X).ToList();
+            List<double> boundaries = new List<double>();
+            //boundaries.Add()
+            PdfPaintedImage prevImage = null;
+            double wordBound = 0;
+            for (int i = 0; i < sortedImages.Count; i++)
+            {
+                PdfPaintedImage image = sortedImages[i];
+                if (prevImage == null){
+                    prevImage = image;
+                    wordBound = prevImage.Bounds.X + prevImage.Bounds.Width;
+                    continue;
+                }
+                double x = 98.280;
+                if (Math.Abs(image.Bounds.X - x) < 0.5)
+                {
+                    int y = 3;
+                }
+                if (wordBound <= image.Bounds.X || Math.Abs(image.Bounds.X - wordBound) < (wordBound * .00001))
+                {
+                    double mid = image.Bounds.X - ((image.Bounds.X - wordBound)/2);
+                    boundaries.Add(mid);
+                    wordBound = image.Bounds.X + image.Bounds.Width;
+                }
+                else
+                {
+                    wordBound = Math.Max(wordBound, image.Bounds.X + image.Bounds.Width);
+                }
+                prevImage = image;
+            }
+            boundaries.Add(prevImage.Bounds.X + prevImage.Bounds.Width);
+
+            return boundaries;
         }
 
         private PdfRectangle[] GenerateBoundList(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage entry, int pageNum)
