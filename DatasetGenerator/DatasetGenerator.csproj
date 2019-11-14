@@ -10,6 +10,7 @@
     <PackageReference Include="BitMiracle.Docotic.Pdf" Version="5.10.10004-dev" />
     <PackageReference Include="MathematicalLibrary" Version="1.1.0" />
     <PackageReference Include="RoyT.TrueType" Version="0.1.1" />
+    <PackageReference Include="System.Collections.Immutable" Version="1.7.0-preview3.19551.4" />
   </ItemGroup>
 
 </Project>

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Diagnostics;
 using DatasetGenerator.Models;
@@ -70,15 +71,16 @@ namespace DatasetGenerator
                 var entryData = new EntryData()
                 {
                     EntryPdf = page.Pages[i],
-                    GardinerSigns = gardinerList.Split(new string[] { " - ", "-" }, StringSplitOptions.RemoveEmptyEntries),
+                    GardinerSigns = gardinerList.Split(new string[] { " - ", "-" }, StringSplitOptions.RemoveEmptyEntries)
+                                                .ToImmutableArray(),
                     EntryIndexInFile = i,
                 };
                 
-                entryData.Images = GenerateBoundList(entryData.GardinerSigns, imageList, page.Pages[i], pageNum).ToArray();
+                entryData.Images = GenerateBoundList(entryData.GardinerSigns, imageList, page.Pages[i], pageNum).ToImmutableArray();
                 Tuple<List<double>, List<GlyphBlock>> boundsAndImages;
                 boundsAndImages = GenerateWordBounds(imageList);
-                entryData.WordBounds = boundsAndImages.Item1.ToArray();
-                entryData.GlyphBlocks = boundsAndImages.Item2.ToArray();
+                entryData.WordBounds = boundsAndImages.Item1.ToImmutableArray();
+                entryData.GlyphBlocks = boundsAndImages.Item2.ToImmutableArray();
 
                 entryList.Add(entryData);
             }
@@ -129,7 +131,7 @@ namespace DatasetGenerator
             return new Tuple<List<double>, List<GlyphBlock>>(boundaries,glyphBlocks);
         }
 
-        private List<PdfPaintedImage> GenerateBoundList(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage entry, int pageNum)
+        private List<PdfPaintedImage> GenerateBoundList(ImmutableArray<string> gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage entry, int pageNum)
         {
             List<PdfPaintedImage> BoundList = new List<PdfPaintedImage>();
             if (gardinerSigns.Length != imageList.Count)
@@ -148,7 +150,7 @@ namespace DatasetGenerator
             return BoundList;
         }
 
-        private List<PdfPaintedImage> FixDifferentLengthLists(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage page, int pageNum)
+        private List<PdfPaintedImage> FixDifferentLengthLists(ImmutableArray<string> gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage page, int pageNum)
         {
             List<PdfPaintedImage> fixedImageList = imageList.ToList().ConvertAll(image => image); //clone the array
             var coords = page.CropBox;
