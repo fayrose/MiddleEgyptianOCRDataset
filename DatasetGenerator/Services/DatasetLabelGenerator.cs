@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Linq;
 using System.Diagnostics;
+using DatasetGenerator.Models;
 
 namespace DatasetGenerator
 {
@@ -73,21 +74,27 @@ namespace DatasetGenerator
                     EntryIndexInFile = i,
                 };
                 
-                entryData.Images = GenerateBoundList(entryData.GardinerSigns, imageList, page.Pages[i], pageNum);
-                entryData.WordBounds = GenerateWordBounds(imageList);
+                entryData.Images = GenerateBoundList(entryData.GardinerSigns, imageList, page.Pages[i], pageNum).ToArray();
+                Tuple<List<double>, List<GlyphBlock>> boundsAndImages;
+                boundsAndImages = GenerateWordBounds(imageList);
+                entryData.WordBounds = boundsAndImages.Item1.ToArray();
+                entryData.GlyphBlocks = boundsAndImages.Item2.ToArray();
+
                 entryList.Add(entryData);
             }
 
             return new PageData() { EntryData = entryList.ToArray(), PageNumber = pageNum };
         }
 
-        private List<double> GenerateWordBounds(PdfCollection<PdfPaintedImage> imageCollection)
+        private Tuple<List<double>, List<GlyphBlock>> GenerateWordBounds(PdfCollection<PdfPaintedImage> imageCollection)
         {
 
             List<PdfPaintedImage> imageList = imageCollection.ToList<PdfPaintedImage>();
             List<PdfPaintedImage> sortedImages = imageList.OrderBy(image => image.Bounds.X).ToList();
             List<double> boundaries = new List<double>();
+            List<GlyphBlock> glyphBlocks = new List<GlyphBlock>();
             //boundaries.Add()
+            GlyphBlock curGlyphBlock = null;
             PdfPaintedImage prevImage = null;
             double wordBound = 0;
             for (int i = 0; i < sortedImages.Count; i++)
@@ -95,24 +102,31 @@ namespace DatasetGenerator
                 PdfPaintedImage image = sortedImages[i];
                 if (prevImage == null){
                     prevImage = image;
+                    curGlyphBlock = new GlyphBlock(new List<PdfPaintedImage>());
+                    curGlyphBlock.addImage(image);
                     wordBound = prevImage.Bounds.X + prevImage.Bounds.Width;
                     continue;
                 }
                 if (wordBound <= image.Bounds.X || Math.Abs(image.Bounds.X - wordBound) < (wordBound * .00001))
                 {
+                    glyphBlocks.Add(curGlyphBlock);
+                    curGlyphBlock = new GlyphBlock(new List<PdfPaintedImage>());
+                    curGlyphBlock.addImage(image);
                     double mid = image.Bounds.X - ((image.Bounds.X - wordBound)/2);
                     boundaries.Add(mid);
                     wordBound = image.Bounds.X + image.Bounds.Width;
                 }
                 else
                 {
+                    curGlyphBlock.addImage(image);
                     wordBound = Math.Max(wordBound, image.Bounds.X + image.Bounds.Width);
                 }
                 prevImage = image;
             }
+            glyphBlocks.Add(curGlyphBlock);
             boundaries.Add(prevImage.Bounds.X + prevImage.Bounds.Width);
 
-            return boundaries;
+            return new Tuple<List<double>, List<GlyphBlock>>(boundaries,glyphBlocks);
         }
 
         private List<PdfPaintedImage> GenerateBoundList(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage entry, int pageNum)

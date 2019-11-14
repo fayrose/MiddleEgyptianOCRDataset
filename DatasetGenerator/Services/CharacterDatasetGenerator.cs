@@ -38,7 +38,7 @@ namespace DatasetGenerator
             foreach (var id in imageIds)
             {
                 var entriesContainingCharacter = datasetData.SelectMany(x => x.EntryData)
-                                                            .Where(x => x.GlyphImages.Select(y => y.Image.Id).Contains(id));
+                                                            .Where(x => x.Images.Select(y => y.Image.Id).Contains(id));
                 var gardinersOfEntries = entriesContainingCharacter.Select(x => x.GardinerSigns).ToArray();
                 var intersected = gardinersOfEntries[0];
                 for (int i = 1; i < gardinersOfEntries.Length; i++)
