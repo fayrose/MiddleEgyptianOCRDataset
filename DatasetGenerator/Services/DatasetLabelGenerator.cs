@@ -73,7 +73,7 @@ namespace DatasetGenerator
                     EntryIndexInFile = i,
                 };
                 
-                entryData.ImageBounds = GenerateBoundList(entryData.GardinerSigns, imageList, page.Pages[i], pageNum);
+                entryData.Images = GenerateBoundList(entryData.GardinerSigns, imageList, page.Pages[i], pageNum);
                 entryData.WordBounds = GenerateWordBounds(imageList);
                 entryList.Add(entryData);
             }
@@ -115,9 +115,9 @@ namespace DatasetGenerator
             return boundaries;
         }
 
-        private PdfRectangle[] GenerateBoundList(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage entry, int pageNum)
+        private List<PdfPaintedImage> GenerateBoundList(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage entry, int pageNum)
         {
-            List<PdfRectangle> BoundList = new List<PdfRectangle>();
+            List<PdfPaintedImage> BoundList = new List<PdfPaintedImage>();
             if (gardinerSigns.Length != imageList.Count)
             {
                 BoundList = FixDifferentLengthLists(gardinerSigns, imageList, entry, pageNum);
@@ -128,15 +128,15 @@ namespace DatasetGenerator
                 for (int j = 0; j < gardinerSigns.Length; j++)
                 {
                     var image = imageList.GetAt(j);
-                    BoundList.Add(image.Bounds);
+                    BoundList.Add(image);
                 }
             }
-            return BoundList.ToArray();
+            return BoundList;
         }
 
-        private List<PdfRectangle> FixDifferentLengthLists(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage page, int pageNum)
+        private List<PdfPaintedImage> FixDifferentLengthLists(string[] gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage page, int pageNum)
         {
-            List<PdfRectangle> boundList = imageList.Select(x => x.Bounds).ToList();
+            List<PdfPaintedImage> fixedImageList = imageList.ToList().ConvertAll(image => image); //clone the array
             var coords = page.CropBox;
             var centerOfEntry = page.Height - (coords.Location.Y + (coords.Height / 2));
             var allYValuesOfImages = imageList.Select(x => x.Position.Y).ToArray();
@@ -144,14 +144,14 @@ namespace DatasetGenerator
 
             var comparedYValues = allYValuesOfImages.Select(x => Math.Abs(x - centerOfEntry) / stdDev).ToList();
             
-            while (boundList.Count > gardinerSigns.Length)
+            while (fixedImageList.Count > gardinerSigns.Length)
             {
                 var comparedMax = comparedYValues.Max();
                 var maxIdx = comparedYValues.IndexOf(comparedMax);
                 comparedYValues.RemoveAt(maxIdx);
-                boundList.RemoveAt(maxIdx);
+                fixedImageList.RemoveAt(maxIdx);
             }
-            return boundList;
+            return fixedImageList;
         }
 
         private string GetGardinersOnPage(PdfPage page)
