@@ -82,7 +82,7 @@ namespace DatasetGenerator
             }
             else if (numberOfMatches > 1)
             {
-                var closeCandidates = new List<Tuple<string, int>>();
+                var closeCandidates = new Dictionary<string, int>();
                 foreach (var candidate in gardinersWithIdCount)
                 {
                     var entriesWithCandidate = entries.Where(x => x.GardinerSigns.Contains(candidate));
@@ -90,26 +90,66 @@ namespace DatasetGenerator
                     var intersection = entriesWithCandidate.Intersect(entriesWithId).ToList();
                     if (intersection.Count > 1)
                     {
-                        closeCandidates.Add(new Tuple<string, int>(candidate, intersection.Count));
+                        closeCandidates.Add(candidate, intersection.Count);
                     }
                 }
                 if (closeCandidates.Count == 1)
                 {
-                    return closeCandidates.Single().Item1;
+                    return closeCandidates.Single().Key;
                 }
                 else if (closeCandidates.Count > 1)
                 {
-
+                    var maxVal = closeCandidates.Values.Max();
+                    return closeCandidates.Where(x => x.Value == maxVal).First().Key;
                 }
                 else
                 {
+                    var entriesWithId = entries.Where(x => x.Images.Select(y => y.Id).Contains(id));
+                    var gardinersWithId = entriesWithId.SelectMany(x => x.GardinerSigns).ToArray();
+                    if (gardinersWithId.Length > 1)
+                    {
+                        var countDict = GenerateCountDictionary(gardinersWithId);
+                        var maxVal = countDict.Values.Max();
+                        var bestCandidate = countDict.Where(x => x.Value == maxVal).Select(x => x.Key).ToArray();
+                        if (bestCandidate.Length == 1)
+                        {
+                            return bestCandidate.Single();
+                        }
+                        else
+                        {
+                            // Return candidate with gardinerCounts[bestCandidate] closest to gardinersWithId.Length
+                            var bestCandidateOccurrances = bestCandidate.Select(x => gardinerCounts[x]);
+                            var candidateOccurrancesDiffFromIdOccurances = bestCandidateOccurrances.Select(x => Math.Abs(entriesWithId.Count() - x));
+                            var lowestError = candidateOccurrancesDiffFromIdOccurances.Min();
+                            return bestCandidate.Where(x => Math.Abs(entriesWithId.Count() - gardinerCounts[x]) == lowestError).First();
+                        }
+                    }
+                    else if (gardinersWithId.Length == 1)
+                    {
+                        return gardinersWithId.Single();
+                    }
+                    else
+                    {
 
+                    }
                 }
                 return null;
             }
             else
             {
+                var entriesWithId = entries.Where(x => x.Images.Select(y => y.Id).Contains(id));
+                var gardinersWithId = entriesWithId.SelectMany(x => x.GardinerSigns).ToArray();
+                if (gardinersWithId.Length > 1)
+                {
+                    var countDict = GenerateCountDictionary(gardinersWithId);
+                    var maxVal = countDict.Values.Max();
+                    var bestCandidate = countDict.Where(x => x.Value == maxVal).Select(x => x.Key).ToArray();
+                    return bestCandidate.Single();
+                }
+                else
+                {
 
+                }
             }
             return null;
         }
