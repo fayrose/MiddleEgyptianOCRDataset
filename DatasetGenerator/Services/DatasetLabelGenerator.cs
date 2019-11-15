@@ -6,6 +6,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Diagnostics;
 using DatasetGenerator.Models;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace DatasetGenerator
 {
@@ -38,7 +40,6 @@ namespace DatasetGenerator
                 {
                     pageData.EntryData[i].Coordinates = metrics[i];
                 }
-
                 PageDataArr[pageNum - 1] = pageData;
             }
             return new DictionaryData() { Pages = PageDataArr.ToImmutableArray() } ;
@@ -69,7 +70,7 @@ namespace DatasetGenerator
                 var imageList = page.Pages[i].GetPaintedImages();
                 var entryData = new EntryData()
                 {
-                    EntryPdf = page.Pages[i],
+                    //EntryPdf = page.Pages[i],
                     GardinerSigns = gardinerList.Split(new string[] { " - ", "-" }, StringSplitOptions.RemoveEmptyEntries)
                                                 .ToImmutableArray(),
                     EntryIndexInFile = i,
@@ -83,6 +84,7 @@ namespace DatasetGenerator
                 entryData.GlyphBlocks = boundsAndImages.Item2.ToImmutableArray();
 
                 entryList.Add(entryData);
+
             }
 
             return new PageData() { EntryData = entryList.ToArray(), PageNumber = pageNum };
@@ -104,23 +106,23 @@ namespace DatasetGenerator
                 PdfPaintedImage image = sortedImages[i];
                 if (prevImage == null){
                     prevImage = image;
-                    curGlyphBlock = new GlyphBlock(new List<PdfPaintedImage>());
-                    curGlyphBlock.AddImage(image);
+                    curGlyphBlock = new GlyphBlock(new List<ImageData>());
+                    curGlyphBlock.AddImage(new ImageData(image));
                     wordBound = prevImage.Bounds.X + prevImage.Bounds.Width;
                     continue;
                 }
                 if (wordBound <= image.Bounds.X || Math.Abs(image.Bounds.X - wordBound) < (wordBound * .00001))
                 {
                     glyphBlocks.Add(curGlyphBlock);
-                    curGlyphBlock = new GlyphBlock(new List<PdfPaintedImage>());
-                    curGlyphBlock.AddImage(image);
+                    curGlyphBlock = new GlyphBlock(new List<ImageData>());
+                    curGlyphBlock.AddImage(new ImageData(image));
                     double mid = image.Bounds.X - ((image.Bounds.X - wordBound)/2);
                     boundaries.Add(mid);
                     wordBound = image.Bounds.X + image.Bounds.Width;
                 }
                 else
                 {
-                    curGlyphBlock.AddImage(image);
+                    curGlyphBlock.AddImage(new ImageData(image));
                     wordBound = Math.Max(wordBound, image.Bounds.X + image.Bounds.Width);
                 }
                 prevImage = image;
@@ -131,9 +133,9 @@ namespace DatasetGenerator
             return new Tuple<List<double>, List<GlyphBlock>>(boundaries,glyphBlocks);
         }
 
-        private ImmutableArray<PaintedPdfWrapper> GenerateBoundList(ImmutableArray<string> gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage entry, int pageNum)
+        private ImmutableArray<ImageData> GenerateBoundList(ImmutableArray<string> gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage entry, int pageNum)
         {
-            List<PaintedPdfWrapper> BoundList = new List<PaintedPdfWrapper>();
+            List<ImageData> BoundList = new List<ImageData>();
             if (gardinerSigns.Length != imageList.Count)
             {
                 BoundList = FixDifferentLengthLists(gardinerSigns, imageList, entry, pageNum);
@@ -144,13 +146,13 @@ namespace DatasetGenerator
                 for (int j = 0; j < gardinerSigns.Length; j++)
                 {
                     var image = imageList.GetAt(j);
-                    BoundList.Add(new PaintedPdfWrapper(image));
+                    BoundList.Add(new ImageData(image));
                 }
             }
             return BoundList.ToImmutableArray();
         }
 
-        private List<PaintedPdfWrapper> FixDifferentLengthLists(ImmutableArray<string> gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage page, int pageNum)
+        private List<ImageData> FixDifferentLengthLists(ImmutableArray<string> gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage page, int pageNum)
         {
             List<PdfPaintedImage> fixedImageList = imageList.ToList().ConvertAll(image => image); //clone the array
             var coords = page.CropBox;
@@ -167,7 +169,7 @@ namespace DatasetGenerator
                 comparedYValues.RemoveAt(maxIdx);
                 fixedImageList.RemoveAt(maxIdx);
             }
-            return fixedImageList.Select( x => new PaintedPdfWrapper(x)).ToList();
+            return fixedImageList.Select( x => new ImageData(x)).ToList();
         }
 
         private string GetGardinersOnPage(PdfPage page)

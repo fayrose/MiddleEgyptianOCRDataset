@@ -2,14 +2,15 @@
 
 namespace DatasetGenerator
 {
-    [DataContract]
     public class PageData
     {
-        [DataMember]
-        public EntryData[] EntryData { get; internal set; }
-        [DataMember]
-        public string FileLocation { get; internal set; }
-        [DataMember]
-        public int PageNumber { get; internal set; }
+        public EntryData[] EntryData { get; set; }
+        public string FileLocation { get; set; }
+        public int PageNumber { get; set; }
+
+        public PageData()
+        {
+
+        }
     }
 }

@@ -161,9 +161,8 @@ namespace DatasetGenerator
             {
                 foreach (var imageWrapper in entryImages)
                 {
-                    var image = imageWrapper.Image;
-                    var matching = vygusPaintedImages.Where(x => Math.Abs(x.Position.X - image.Position.X) <= 0.5
-                                                              && Math.Abs(x.Position.Y - image.Position.Y) <= 0.5)
+                    var matching = vygusPaintedImages.Where(x => Math.Abs(x.Position.X - imageWrapper.X) <= 0.5
+                                                              && Math.Abs(x.Position.Y - imageWrapper.Y) <= 0.5)
                                                      .ToList();
                     imageWrapper.AddId(matching.Single().Image.Id);
 

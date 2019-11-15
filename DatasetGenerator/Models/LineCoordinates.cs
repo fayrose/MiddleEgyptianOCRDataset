@@ -2,16 +2,11 @@
 
 namespace DatasetGenerator
 {
-    [DataContract]
     public class LineCoordinates
     {
-        [DataMember]
-        public double LineBottom { get; internal set; }
-        [DataMember]
-        public double LineTop { get; internal set; }
-        [DataMember]
-        public double LineHeight { get; internal set; }
-        [DataMember]
-        public double TextHeight { get; internal set; }
+        public double LineBottom { get; set; }
+        public double LineTop { get; set; }
+        public double LineHeight { get; set; }
+        public double TextHeight { get; set; }
     }
 }

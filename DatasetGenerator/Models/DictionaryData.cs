@@ -3,10 +3,8 @@ using System.Runtime.Serialization;
 
 namespace DatasetGenerator
 {
-    [DataContract]
     public class DictionaryData
     {
-        [DataMember]
-        public ImmutableArray<PageData> Pages { get; internal set; }
+        public ImmutableArray<PageData> Pages { get; set; }
     }
 }

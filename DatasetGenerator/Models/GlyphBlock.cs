@@ -4,17 +4,21 @@ using BitMiracle.Docotic.Pdf;
 
 namespace DatasetGenerator.Models
 {
-    [DataContract]
     public class GlyphBlock
     {
-        [DataMember]
-        private List<PdfPaintedImage> Images { get; }
-        public GlyphBlock(List<PdfPaintedImage> imgs)
+        private List<ImageData> Images { get; set; }
+
+        public GlyphBlock()
+        {
+            //Neeeded for deserialization
+        }
+
+        public GlyphBlock(List<ImageData> imgs)
         {
             Images = imgs;
         }
 
-        internal void AddImage(PdfPaintedImage img)
+        internal void AddImage(ImageData img)
         {
             Images.Add(img);
         }
