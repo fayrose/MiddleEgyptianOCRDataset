@@ -62,6 +62,7 @@ namespace DatasetGenerator
             Dictionary<string, string> ImageIdToGardinerValue = new Dictionary<string, string>();
             foreach (var id in entryIdCounts.Keys)
             {
+                Console.WriteLine(ImageIdToGardinerValue.Count);
                 var gardiner = GetNameFromEntries(entries, id, entryIdCounts, gardinerCounts);
                 ImageIdToGardinerValue.Add(id, gardiner);
             }
@@ -121,7 +122,19 @@ namespace DatasetGenerator
                             var bestCandidateOccurrances = bestCandidate.Select(x => gardinerCounts[x]);
                             var candidateOccurrancesDiffFromIdOccurances = bestCandidateOccurrances.Select(x => Math.Abs(entriesWithId.Count() - x));
                             var lowestError = candidateOccurrancesDiffFromIdOccurances.Min();
-                            return bestCandidate.Where(x => Math.Abs(entriesWithId.Count() - gardinerCounts[x]) == lowestError).First();
+                            var entriesWithLowestError = bestCandidate.Where(x => Math.Abs(entriesWithId.Count() - gardinerCounts[x]) == lowestError);
+
+                            if (entriesWithLowestError.Count() == 1)
+                            {
+                                return entriesWithLowestError.Single();
+                            }
+                            else
+                            {
+                                if (entriesWithId.Count() == 1)
+                                {
+                                    // Go by glyph position in relation to other entries with lowest error
+                                }
+                            }
                         }
                     }
                     else if (gardinersWithId.Length == 1)
@@ -133,7 +146,6 @@ namespace DatasetGenerator
 
                     }
                 }
-                return null;
             }
             else
             {
