@@ -13,7 +13,7 @@ namespace DatasetGenerator
         [DataMember]
         public ImmutableArray<string> GardinerSigns { get; internal set; }
         [DataMember]
-        public ImmutableArray<PdfPaintedImage> Images { get; internal set; }
+        public ImmutableArray<PaintedPdfWrapper> Images { get; internal set; }
         [IgnoreDataMember]
         public PdfPage EntryPdf { get; internal set; }
         [DataMember]

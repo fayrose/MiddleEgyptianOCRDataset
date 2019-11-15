@@ -1,4 +1,5 @@
 ﻿using BitMiracle.Docotic.Pdf;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -32,68 +33,119 @@ namespace DatasetGenerator
             return Pdf.GetImages().ToArray();
         }
 
-        public Dictionary<string, string> GetNamesFromSplitPdfs(PageData[] datasetData)
+        private void MapFullVygusIdsToSplitVygusIds(DictionaryData data)
         {
-            // Full Character Set
-            var imageIds = GetCharacterSetFromPdf().Select(x => x.Id);
-            var entries = datasetData.SelectMany(x => x.EntryData);
+            var paintedImagesPerPage = Pdf.Pages.Select(x => x.GetPaintedImages()).ToArray();
+            var fullVygusIds = paintedImagesPerPage.SelectMany(x => x) // Flattens before getting Ids
+                                                   .Select(x => x.Image.Id);
+            var fullVygusCounts = GenerateCountDictionary(fullVygusIds);
+
+            for (int i = 0; i < data.Pages.Length; i++)
+            {
+                MapPictureIdsForPage(paintedImagesPerPage[i], data.Pages[i]);
+            }
+        }
+
+        public Dictionary<string, string> GetNamesFromSplitPdfs(DictionaryData datasetData)
+        {
+            MapFullVygusIdsToSplitVygusIds(datasetData);
+
+            // Get count of each image ID
+            var entries = datasetData.Pages.SelectMany(x => x.EntryData);
+            var imageIds = entries.SelectMany(x => x.Images.Select(y => y.Id));
+            var entryIdCounts = GenerateCountDictionary(imageIds);
+
+            // Get count of each gardiner ID
+            var gardinerIds = entries.SelectMany(x => x.GardinerSigns);
+            var gardinerCounts = GenerateCountDictionary(gardinerIds);
 
             Dictionary<string, string> ImageIdToGardinerValue = new Dictionary<string, string>();
-            foreach (var id in imageIds)
+            foreach (var id in entryIdCounts.Keys)
             {
-                var gardiner = GetNameFromEntries(entries, id);
+                var gardiner = GetNameFromEntries(entries, id, entryIdCounts, gardinerCounts);
                 ImageIdToGardinerValue.Add(id, gardiner);
             }
             return ImageIdToGardinerValue;
         }
 
-        private string GetNameFromEntries(IEnumerable<EntryData> entries, string id)
+        private string GetNameFromEntries(IEnumerable<EntryData> entries,
+                                          string id,
+                                          Dictionary<string, int> entryIdCounts,
+                                          Dictionary<string, int> gardinerCounts)
         {
-            string Gardiner;
-
-            var entriesContainingCharacter = entries.Where(x => x.Images.Select(y => y.Image.Id).Contains(id));
-            if (entriesContainingCharacter.Count() > 1)
+            var idCount = entryIdCounts[id];
+            var gardinersWithIdCount = gardinerCounts.Where(x => x.Value == idCount).Select(x => x.Key);
+            var numberOfMatches = gardinersWithIdCount.Count();
+            if (numberOfMatches == 1)
             {
-                // Intersect the gardiner ID lists of all entries containing this image ID
-                // This should hopefully produce a singular gardiner value.
-                var gardinersOfEntries = entriesContainingCharacter.Select(x => x.GardinerSigns).ToArray();
-                IEnumerable<string> intersected = gardinersOfEntries[0].ToArray();
-                for (int i = 1; i < gardinersOfEntries.Length; i++)
-                {
-                    intersected = intersected.Intersect(gardinersOfEntries[i]);
-                }
-                Debug.Assert(intersected.Count() == 1);
-                Gardiner = intersected.Single();
-                // Choose best of intersected
+                return gardinersWithIdCount.Single();
             }
-            // Special case where entriesContainingCharacter.length == 1 and you want to find the only gardiner not occurring elsewhere
-            else if (entriesContainingCharacter.Count() == 1)
+            else if (numberOfMatches > 1)
             {
-                var candidates = entriesContainingCharacter.Single().GardinerSigns;
-                var closeCandidates = new List<string>();
-                foreach (var sign in candidates)
+                var closeCandidates = new List<Tuple<string, int>>();
+                foreach (var candidate in gardinersWithIdCount)
                 {
-                    var entriesContainingSign = entries.Where(x => x.GardinerSigns.Contains(sign));
-                    if (entriesContainingSign.Count() == 1)
+                    var entriesWithCandidate = entries.Where(x => x.GardinerSigns.Contains(candidate));
+                    var entriesWithId = entries.Where(x => x.Images.Select(y => y.Id).Contains(id));
+                    var intersection = entriesWithCandidate.Intersect(entriesWithId).ToList();
+                    if (intersection.Count > 1)
                     {
-                        closeCandidates.Add(sign);
+                        closeCandidates.Add(new Tuple<string, int>(candidate, intersection.Count));
                     }
                 }
-                Debug.Assert(closeCandidates.Count() == 1);
-                Gardiner = closeCandidates.Single();
+                if (closeCandidates.Count == 1)
+                {
+                    return closeCandidates.Single().Item1;
+                }
+                else if (closeCandidates.Count > 1)
+                {
+
+                }
+                else
+                {
+
+                }
+                return null;
             }
-            else // Image never occurs in any entry of PDF
+            else
             {
-                throw new System.Exception("Should never happen");
+
             }
-            return Gardiner;
-            /* Options: Augment label generator to take list of PdfPaintedImage, not the PdfPaintedImage.Bounds (type=PdfRectangle)
-                *          and then pass generated PageData / EntryData into this function. Get the painted image ID and see which IDs 
-                *          are always present with certain Gardiner glyphs. Note that page.Pages[0].GetPaintedImages() will not necessarily
-                *          be in the order that the gardiner glyphs are. 
-                *          
-                *          Therefore find all pages that contain a certain image ID, and compare to glyphs found in all of those pages to obtain match.
-            */
+            return null;
+        }
+
+        private void MapPictureIdsForPage(PdfCollection<PdfPaintedImage> vygusPaintedImages, PageData pageData)
+        {
+            var imagesByEntry = pageData.EntryData.Select(x => x.Images);
+            foreach (var entryImages in imagesByEntry)
+            {
+                foreach (var imageWrapper in entryImages)
+                {
+                    var image = imageWrapper.Image;
+                    var matching = vygusPaintedImages.Where(x => Math.Abs(x.Position.X - image.Position.X) <= 0.5
+                                                              && Math.Abs(x.Position.Y - image.Position.Y) <= 0.5)
+                                                     .ToList();
+                    imageWrapper.AddId(matching.Single().Image.Id);
+
+                }
+            }
+        }
+
+        private Dictionary<string, int> GenerateCountDictionary(IEnumerable<string> input)
+        {
+            Dictionary<string, int> countDict = new Dictionary<string, int>();
+            foreach (string item in input)
+            {
+                if (countDict.ContainsKey(item))
+                {
+                    countDict[item] += 1;
+                }
+                else
+                {
+                    countDict.Add(item, 1);
+                }
+            }
+            return countDict;
         }
     }
 }

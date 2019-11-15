@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Runtime.Serialization.Json;
 
-namespace DatasetGenerator.Services
+namespace DatasetGenerator
 {
     public static class JsonSerializer
     {
