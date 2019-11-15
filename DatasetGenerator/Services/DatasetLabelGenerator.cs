@@ -20,26 +20,28 @@ namespace DatasetGenerator
 
         public DictionaryData ParseAllFiles()
         {
-            var allEntryBounds = new List<PageData>();
             string[] fileNames = Directory.GetFiles(FileDirectory);
+            var PageDataArr = new PageData[fileNames.Length];
+
             foreach (var fileStr in fileNames)
             {
                 int pageNum = GetPageNumberFromFileName(fileStr);
                 Console.WriteLine("Processing page #" + pageNum.ToString() + "...");
 
                 using var page = new PdfDocument(fileStr);
-                var pageData = ParsePage(page, pageNum);
-                pageData.FileLocation = fileStr;
 
+                var pageData = ParsePage(page, pageNum);
+
+                pageData.FileLocation = fileStr;
                 var metrics = RectangleCreator.GetMetricsOfSplit(page);
                 for (int i = 0; i < pageData.EntryData.Length; i++)
                 {
                     pageData.EntryData[i].Coordinates = metrics[i];
                 }
 
-                allEntryBounds.Add(pageData);
+                PageDataArr[pageNum - 1] = pageData;
             }
-            return new DictionaryData() { Pages = allEntryBounds.ToImmutableArray() } ;
+            return new DictionaryData() { Pages = PageDataArr.ToImmutableArray() } ;
         }
 
         /// <summary>
@@ -72,8 +74,9 @@ namespace DatasetGenerator
                                                 .ToImmutableArray(),
                     EntryIndexInFile = i,
                 };
+
+                entryData.Images = GenerateBoundList(entryData.GardinerSigns, imageList, page.Pages[i], pageNum);
                 
-                entryData.Images = GenerateBoundList(entryData.GardinerSigns, imageList, page.Pages[i], pageNum).ToImmutableArray();
                 Tuple<List<double>, List<GlyphBlock>> boundsAndImages;
                 boundsAndImages = GenerateWordBounds(imageList);
                 entryData.WordBounds = boundsAndImages.Item1.ToImmutableArray();
@@ -128,9 +131,9 @@ namespace DatasetGenerator
             return new Tuple<List<double>, List<GlyphBlock>>(boundaries,glyphBlocks);
         }
 
-        private List<PdfPaintedImage> GenerateBoundList(ImmutableArray<string> gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage entry, int pageNum)
+        private ImmutableArray<PaintedPdfWrapper> GenerateBoundList(ImmutableArray<string> gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage entry, int pageNum)
         {
-            List<PdfPaintedImage> BoundList = new List<PdfPaintedImage>();
+            List<PaintedPdfWrapper> BoundList = new List<PaintedPdfWrapper>();
             if (gardinerSigns.Length != imageList.Count)
             {
                 BoundList = FixDifferentLengthLists(gardinerSigns, imageList, entry, pageNum);
@@ -141,13 +144,13 @@ namespace DatasetGenerator
                 for (int j = 0; j < gardinerSigns.Length; j++)
                 {
                     var image = imageList.GetAt(j);
-                    BoundList.Add(image);
+                    BoundList.Add(new PaintedPdfWrapper(image));
                 }
             }
-            return BoundList;
+            return BoundList.ToImmutableArray();
         }
 
-        private List<PdfPaintedImage> FixDifferentLengthLists(ImmutableArray<string> gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage page, int pageNum)
+        private List<PaintedPdfWrapper> FixDifferentLengthLists(ImmutableArray<string> gardinerSigns, PdfCollection<PdfPaintedImage> imageList, PdfPage page, int pageNum)
         {
             List<PdfPaintedImage> fixedImageList = imageList.ToList().ConvertAll(image => image); //clone the array
             var coords = page.CropBox;
@@ -164,7 +167,7 @@ namespace DatasetGenerator
                 comparedYValues.RemoveAt(maxIdx);
                 fixedImageList.RemoveAt(maxIdx);
             }
-            return fixedImageList;
+            return fixedImageList.Select( x => new PaintedPdfWrapper(x)).ToList();
         }
 
         private string GetGardinersOnPage(PdfPage page)
