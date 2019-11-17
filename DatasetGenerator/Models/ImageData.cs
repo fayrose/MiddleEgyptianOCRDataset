@@ -10,6 +10,7 @@ namespace DatasetGenerator.Models
         public double Width { get; set; }
         public double Height { get; set; }
         public string Id { get; set; }
+        public string GardinerSign { get; set; }
 
         public ImageData()
         {

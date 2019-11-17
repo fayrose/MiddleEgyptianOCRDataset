@@ -6,8 +6,8 @@ namespace DatasetGenerator.Models
 {
     public class GlyphBlock
     {
-        private List<ImageData> Images { get; set; }
-
+        internal List<ImageData> Images { get; private set; }
+        public int Size => Images.Count;
         public GlyphBlock()
         {
             //Neeeded for deserialization

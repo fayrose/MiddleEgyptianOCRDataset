@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DatasetGenerator": {
+      "commandName": "Project",
+      "workingDirectory": "C:\\Users\\lfr2l\\source\\repos\\DatasetGenerator\\DatasetGenerator"
+    }
+  }
+}

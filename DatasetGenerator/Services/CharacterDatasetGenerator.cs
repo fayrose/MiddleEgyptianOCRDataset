@@ -9,22 +9,22 @@ namespace DatasetGenerator
 {
     class CharacterDatasetGenerator
     {
-        readonly string PdfLocation;
         readonly string OutputDirectory;
         readonly PdfDocument Pdf;
         public CharacterDatasetGenerator(string inputLocation, string outputFolder)
         {
-            PdfLocation = inputLocation;
             OutputDirectory = outputFolder;
-            Pdf = new PdfDocument(PdfLocation);
+            Pdf = new PdfDocument(inputLocation);
         }
-        public void SaveCharacterFilesFromPdf()
+        public void SaveCharacterFilesFromPdf(Dictionary<string, string> characterMap)
         {
             var images = GetCharacterSetFromPdf();
 
             for (int i = 0; i < images.Count(); i++)
             {
-                images[i].Save(Path.Combine(OutputDirectory, "char" + (i + 1).ToString()));
+                string glyphName = characterMap[images[i].Id];
+                Console.WriteLine("Saving glyph " + glyphName + "...");
+                images[i].Save(Path.Combine(OutputDirectory, glyphName));
             }
         }
 
@@ -33,31 +33,17 @@ namespace DatasetGenerator
             return Pdf.GetImages().ToArray();
         }
 
-        private void MapFullVygusIdsToSplitVygusIds(DictionaryData data)
-        {
-            var paintedImagesPerPage = Pdf.Pages.Select(x => x.GetPaintedImages()).ToArray();
-            var fullVygusIds = paintedImagesPerPage.SelectMany(x => x) // Flattens before getting Ids
-                                                   .Select(x => x.Image.Id);
-            var fullVygusCounts = GenerateCountDictionary(fullVygusIds);
-
-            for (int i = 0; i < data.Pages.Length; i++)
-            {
-                MapPictureIdsForPage(paintedImagesPerPage[i], data.Pages[i]);
-            }
-        }
-
+        
         public Dictionary<string, string> GetNamesFromSplitPdfs(DictionaryData datasetData)
         {
-            MapFullVygusIdsToSplitVygusIds(datasetData);
-
             // Get count of each image ID
             var entries = datasetData.Pages.SelectMany(x => x.EntryData);
             var imageIds = entries.SelectMany(x => x.Images.Select(y => y.Id));
-            var entryIdCounts = GenerateCountDictionary(imageIds);
+            var entryIdCounts = CountDictionary.Generate(imageIds);
 
             // Get count of each gardiner ID
             var gardinerIds = entries.SelectMany(x => x.GardinerSigns);
-            var gardinerCounts = GenerateCountDictionary(gardinerIds);
+            var gardinerCounts = CountDictionary.Generate(gardinerIds);
 
             Dictionary<string, string> ImageIdToGardinerValue = new Dictionary<string, string>();
             foreach (var id in entryIdCounts.Keys)
@@ -101,7 +87,7 @@ namespace DatasetGenerator
                 else if (closeCandidates.Count > 1)
                 {
                     var maxVal = closeCandidates.Values.Max();
-                    return closeCandidates.Where(x => x.Value == maxVal).First().Key;
+                    return closeCandidates.Where(x => x.Value == maxVal).Single().Key;
                 }
                 else
                 {
@@ -109,7 +95,7 @@ namespace DatasetGenerator
                     var gardinersWithId = entriesWithId.SelectMany(x => x.GardinerSigns).ToArray();
                     if (gardinersWithId.Length > 1)
                     {
-                        var countDict = GenerateCountDictionary(gardinersWithId);
+                        var countDict = CountDictionary.Generate(gardinersWithId);
                         var maxVal = countDict.Values.Max();
                         var bestCandidate = countDict.Where(x => x.Value == maxVal).Select(x => x.Key).ToArray();
                         if (bestCandidate.Length == 1)
@@ -132,7 +118,35 @@ namespace DatasetGenerator
                             {
                                 if (entriesWithId.Count() == 1)
                                 {
-                                    // Go by glyph position in relation to other entries with lowest error
+                                    var entr = entriesWithId.Single();
+                                    if (entriesWithLowestError.Contains(entr.GardinerSigns[entr.GardinerSigns.Length - 1])
+                                     && entr.GlyphBlocks[entr.GlyphBlocks.Length - 1].Size == 1)
+                                    {
+                                        var lastBlock = entr.GlyphBlocks[entr.GlyphBlocks.Length - 1];
+                                        var image = entr.Images.Where(x => x.Id == id).Single();
+                                        if (entr.Images.Last().Id == image.Id)
+                                        {
+                                            return entr.GardinerSigns[entr.GardinerSigns.Length - 1];
+                                        }
+                                        else
+                                        {
+                                            return entriesWithLowestError.Where(x => x != entr.GardinerSigns[entr.GardinerSigns.Length - 1]).Single();
+                                        }
+                                    }
+                                    else if (entr.GlyphBlocks.Where(x => x.Size == 1).Count() == entr.GlyphBlocks.Length)
+                                    {
+                                        for (int i = 0; i < entr.GlyphBlocks.Length; i++)
+                                        {
+                                            if (entr.GlyphBlocks[i].Images[0].Id == id)
+                                            {
+                                                return entr.GardinerSigns[i];
+                                            }
+                                            else if (entr.Images[i].Id == id)
+                                            {
+                                                return entr.GardinerSigns[i];
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -140,10 +154,6 @@ namespace DatasetGenerator
                     else if (gardinersWithId.Length == 1)
                     {
                         return gardinersWithId.Single();
-                    }
-                    else
-                    {
-
                     }
                 }
             }
@@ -153,50 +163,15 @@ namespace DatasetGenerator
                 var gardinersWithId = entriesWithId.SelectMany(x => x.GardinerSigns).ToArray();
                 if (gardinersWithId.Length > 1)
                 {
-                    var countDict = GenerateCountDictionary(gardinersWithId);
+                    var countDict = CountDictionary.Generate(gardinersWithId);
                     var maxVal = countDict.Values.Max();
                     var bestCandidate = countDict.Where(x => x.Value == maxVal).Select(x => x.Key).ToArray();
                     return bestCandidate.Single();
-                }
-                else
-                {
-
                 }
             }
             return null;
         }
 
-        private void MapPictureIdsForPage(PdfCollection<PdfPaintedImage> vygusPaintedImages, PageData pageData)
-        {
-            var imagesByEntry = pageData.EntryData.Select(x => x.Images);
-            foreach (var entryImages in imagesByEntry)
-            {
-                foreach (var imageWrapper in entryImages)
-                {
-                    var matching = vygusPaintedImages.Where(x => Math.Abs(x.Position.X - imageWrapper.X) <= 0.5
-                                                              && Math.Abs(x.Position.Y - imageWrapper.Y) <= 0.5)
-                                                     .ToList();
-                    imageWrapper.AddId(matching.Single().Image.Id);
-
-                }
-            }
-        }
-
-        private Dictionary<string, int> GenerateCountDictionary(IEnumerable<string> input)
-        {
-            Dictionary<string, int> countDict = new Dictionary<string, int>();
-            foreach (string item in input)
-            {
-                if (countDict.ContainsKey(item))
-                {
-                    countDict[item] += 1;
-                }
-                else
-                {
-                    countDict.Add(item, 1);
-                }
-            }
-            return countDict;
-        }
+        
     }
 }

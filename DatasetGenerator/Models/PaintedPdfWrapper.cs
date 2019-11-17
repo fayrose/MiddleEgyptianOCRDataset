@@ -21,8 +21,6 @@ namespace DatasetGenerator.Models
             {
                 Id = id;
             }
-            else
-            {}
         }
 
     }
