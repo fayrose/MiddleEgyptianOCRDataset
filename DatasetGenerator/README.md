@@ -29,8 +29,8 @@ cdg.SaveCharacterFilesFromPdf(DESERIALIZED DATA FROM characterMap.json);
 In order to create a new characterMap.json file (warning: takes about an hour):
 
 ```c#
-CharacterDatasetGenerator cdg = new CharacterDatasetGenerator(LOCATION_OF_VYGUS_2018, DIRECTORY_FOR_OUTPUT_CHARS);
-cdg.GetNamesFromSplitPdfs(DictionaryData DATASET adjustedData PRODUCED ABOVE)
+ImageIdToGardinerMapper iitgm = new ImageIdToGardinerMapper(LOCATION_OF_VYGUS_2018);
+iitgm.GetNamesFromSplitPdfs(DictionaryData DATASET adjustedData PRODUCED ABOVE)
 ```
 
 In order to serialize a created file, run:

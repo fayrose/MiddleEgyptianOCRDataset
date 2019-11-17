@@ -22,11 +22,11 @@ namespace DatasetGenerator.Services
             // Get count of each image ID
             var entries = datasetData.Pages.SelectMany(x => x.EntryData);
             var imageIds = entries.SelectMany(x => x.Images.Select(y => y.Id));
-            var entryIdCounts = GenerateCountDictionary(imageIds);
+            var entryIdCounts = CountDictionary.Generate(imageIds);
 
             // Get count of each gardiner ID
             var gardinerIds = entries.SelectMany(x => x.GardinerSigns);
-            var gardinerCounts = GenerateCountDictionary(gardinerIds);
+            var gardinerCounts = CountDictionary.Generate(gardinerIds);
 
             Dictionary<string, string> ImageIdToGardinerValue = new Dictionary<string, string>();
             foreach (var id in entryIdCounts.Keys)
@@ -43,7 +43,7 @@ namespace DatasetGenerator.Services
             var paintedImagesPerPage = Pdf.Pages.Select(x => x.GetPaintedImages()).ToArray();
             var fullVygusIds = paintedImagesPerPage.SelectMany(x => x) // Flattens before getting Ids
                                                    .Select(x => x.Image.Id);
-            var fullVygusCounts = GenerateCountDictionary(fullVygusIds);
+            var fullVygusCounts = CountDictionary.Generate(fullVygusIds);
 
             for (int i = 0; i < data.Pages.Length; i++)
             {
@@ -91,7 +91,7 @@ namespace DatasetGenerator.Services
                     var gardinersWithId = entriesWithId.SelectMany(x => x.GardinerSigns).ToArray();
                     if (gardinersWithId.Length > 1)
                     {
-                        var countDict = GenerateCountDictionary(gardinersWithId);
+                        var countDict = CountDictionary.Generate(gardinersWithId);
                         var maxVal = countDict.Values.Max();
                         var bestCandidate = countDict.Where(x => x.Value == maxVal).Select(x => x.Key).ToArray();
                         if (bestCandidate.Length == 1)
@@ -162,7 +162,7 @@ namespace DatasetGenerator.Services
                 var gardinersWithId = entriesWithId.SelectMany(x => x.GardinerSigns).ToArray();
                 if (gardinersWithId.Length > 1)
                 {
-                    var countDict = GenerateCountDictionary(gardinersWithId);
+                    var countDict = CountDictionary.Generate(gardinersWithId);
                     var maxVal = countDict.Values.Max();
                     var bestCandidate = countDict.Where(x => x.Value == maxVal).Select(x => x.Key).ToArray();
                     return bestCandidate.Single();
@@ -201,23 +201,6 @@ namespace DatasetGenerator.Services
                     }
                 }
             }
-        }
-
-        private Dictionary<string, int> GenerateCountDictionary(IEnumerable<string> input)
-        {
-            Dictionary<string, int> countDict = new Dictionary<string, int>();
-            foreach (string item in input)
-            {
-                if (countDict.ContainsKey(item))
-                {
-                    countDict[item] += 1;
-                }
-                else
-                {
-                    countDict.Add(item, 1);
-                }
-            }
-            return countDict;
         }
     }
 }
