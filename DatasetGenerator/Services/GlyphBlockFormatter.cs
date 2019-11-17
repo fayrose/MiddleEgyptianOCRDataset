@@ -6,7 +6,7 @@ namespace DatasetGenerator
 {
     class GlyphBlockFormatter
     {
-        public static string FormatGlyphBlock(GlyphBlock block)
+        public static string Format(GlyphBlock block)
         {
             switch (block.Size) 
             {
