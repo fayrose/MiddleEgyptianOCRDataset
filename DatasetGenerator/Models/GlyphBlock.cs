@@ -6,7 +6,7 @@ namespace DatasetGenerator.Models
 {
     public class GlyphBlock
     {
-        internal List<ImageData> Images { get; private set; }
+        public List<ImageData> Images { get; set; }
         public int Size => Images.Count;
         public GlyphBlock()
         {
@@ -18,7 +18,7 @@ namespace DatasetGenerator.Models
             Images = imgs;
         }
 
-        internal void AddImage(ImageData img)
+        public void AddImage(ImageData img)
         {
             Images.Add(img);
         }
