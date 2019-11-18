@@ -5,9 +5,6 @@ using System.IO;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Diagnostics;
-using DatasetGenerator.Models;
-using System.Text.Json.Serialization;
-using System.Text.Json;
 
 namespace DatasetGenerator
 {
@@ -53,6 +50,7 @@ namespace DatasetGenerator
         private int GetPageNumberFromFileName(string fileName)
         {   
             int indexOfPeriod = fileName.IndexOf("Aug");
+
             // Each file prepended with "page" so skip to 4th char for substring
             int endOfPagePrefix = fileName.IndexOf("page") + 4;
             int length = indexOfPeriod - endOfPagePrefix;
@@ -70,7 +68,6 @@ namespace DatasetGenerator
                 var imageList = page.Pages[i].GetPaintedImages();
                 var entryData = new EntryData()
                 {
-                    //EntryPdf = page.Pages[i],
                     GardinerSigns = gardinerList.Split(new string[] { " - ", "-" }, StringSplitOptions.RemoveEmptyEntries)
                                                 .ToImmutableArray(),
                     EntryIndexInFile = i,
@@ -97,7 +94,6 @@ namespace DatasetGenerator
             List<PdfPaintedImage> sortedImages = imageList.OrderBy(image => image.Bounds.X).ToList();
             List<double> boundaries = new List<double>();
             List<GlyphBlock> glyphBlocks = new List<GlyphBlock>();
-            //boundaries.Add()
             GlyphBlock curGlyphBlock = null;
             PdfPaintedImage prevImage = null;
             double wordBound = 0;
