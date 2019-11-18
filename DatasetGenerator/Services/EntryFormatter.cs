@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -9,9 +10,20 @@ namespace DatasetGenerator.Services
     {
         public static void FormatEntry(EntryData entry)
         {
-            var formattedBlocks = entry.GlyphBlocks.Select(x => GlyphBlockFormatter.Format(x));
-            var parenthesizedFormattedBlocks = formattedBlocks.Select(x => "(" + x + ")");
-            var manuelDeCodage = String.Join('-', parenthesizedFormattedBlocks);
+            int offset = 0;
+            var gardiner = entry.GardinerSigns.ToArray();
+            List<string> formattedBlocks = new List<string>();
+
+            // Split Gardiners according to gardiner blocks
+            for (int i = 0; i < entry.GlyphBlocks.Length; i++)
+            {
+                var block = entry.GlyphBlocks[i];
+                var formattedBlock = GlyphBlockFormatter.Format(block, gardiner[offset..block.Size]);
+                formattedBlocks.Add('(' + formattedBlock + ')');
+                offset += block.Size;
+            }
+
+            var manuelDeCodage = String.Join('-', formattedBlocks);
 
             ValidateEntry(manuelDeCodage, entry.GardinerSigns);
             entry.ManuelDeCodage = manuelDeCodage;

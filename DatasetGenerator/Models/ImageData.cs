@@ -1,7 +1,7 @@
 ﻿using System;
 using BitMiracle.Docotic.Pdf;
 
-namespace DatasetGenerator.Models
+namespace DatasetGenerator
 {
     public class ImageData
     {
