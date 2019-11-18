@@ -19,6 +19,8 @@ namespace DatasetGenerator.Services
 
         private static void ValidateEntry(string MdC, ImmutableArray<string> entryGardiner)
         {
+            // Ensures that the outputted formatting and the list of gardiner signs have the 
+            // same order, implying correct behavior.
             var strippedMdC = MdC.Split(new char[] { '*', ':', '-', '(', ')' });
             Debug.Equals(strippedMdC.Length, entryGardiner.Length);
             for (int i = 0; i < entryGardiner.Length; i++)
