@@ -15,6 +15,7 @@ namespace DatasetGenerator
         public ImmutableArray<double> WordBounds { get; set; }
         public ImmutableArray<GlyphBlock> GlyphBlocks { get; set; }
         
+        public string ManuelDeCodage { get; set; }
         //public Bitmap EntryImage { get; internal set; }
 
         public EntryData()
