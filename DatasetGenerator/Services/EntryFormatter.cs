@@ -8,6 +8,17 @@ namespace DatasetGenerator.Services
 {
     class EntryFormatter
     {
+        public static void FormatDictionary(DictionaryData data)
+        {
+            foreach (var page in data.Pages)
+            {
+                foreach (var entry in page.EntryData)
+                {
+                    FormatEntry(entry);
+                }
+            }
+        }
+
         public static void FormatEntry(EntryData entry)
         {
             int offset = 0;
