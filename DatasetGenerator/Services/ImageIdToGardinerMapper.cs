@@ -3,16 +3,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 
-namespace DatasetGenerator.Services
+namespace DatasetGenerator
 {
     class ImageIdToGardinerMapper
     {
         PdfDocument Pdf;
 
-        public ImageIdToGardinerMapper(PdfDocument pdf)
+        public ImageIdToGardinerMapper(string pdfLocation)
         {
-            Pdf = pdf;
+            Pdf = new PdfDocument(pdfLocation);
         }
 
         public Dictionary<string, string> GetNamesFromSplitPdfs(DictionaryData datasetData)
@@ -57,7 +58,10 @@ namespace DatasetGenerator.Services
                                           Dictionary<string, int> gardinerCounts)
         {
             var idCount = entryIdCounts[id];
+
+            var entriesWithId = entries.Where(x => x.Images.Select(y => y.Id).Contains(id));
             var gardinersWithIdCount = gardinerCounts.Where(x => x.Value == idCount).Select(x => x.Key);
+            var gardinersWithId = entriesWithId.SelectMany(x => x.GardinerSigns).ToArray();
             var numberOfMatches = gardinersWithIdCount.Count();
             if (numberOfMatches == 1)
             {
@@ -66,14 +70,24 @@ namespace DatasetGenerator.Services
             else if (numberOfMatches > 1)
             {
                 var closeCandidates = new Dictionary<string, int>();
-                foreach (var candidate in gardinersWithIdCount)
+                if (idCount != 1)
                 {
-                    var entriesWithCandidate = entries.Where(x => x.GardinerSigns.Contains(candidate));
-                    var entriesWithId = entries.Where(x => x.Images.Select(y => y.Id).Contains(id));
-                    var intersection = entriesWithCandidate.Intersect(entriesWithId).ToList();
-                    if (intersection.Count > 1)
+                    foreach (var candidate in gardinersWithIdCount)
                     {
-                        closeCandidates.Add(candidate, intersection.Count);
+                        var entriesWithCandidate = entries.Where(x => x.GardinerSigns.Contains(candidate));
+                        var intersection = entriesWithCandidate.Intersect(entriesWithId).ToList();
+                        if (intersection.Count > 1)
+                        {
+                            closeCandidates.Add(candidate, intersection.Count);
+                        }
+                    }
+                }
+                else
+                {
+                    var singleGlyphEntries = entriesWithId.Where(x => x.GardinerSigns.Length == 1);
+                    if (singleGlyphEntries.Count() > 0)
+                    {
+                        return singleGlyphEntries.First().GardinerSigns[0];
                     }
                 }
                 if (closeCandidates.Count == 1)
@@ -87,59 +101,47 @@ namespace DatasetGenerator.Services
                 }
                 else
                 {
-                    var entriesWithId = entries.Where(x => x.Images.Select(y => y.Id).Contains(id));
-                    var gardinersWithId = entriesWithId.SelectMany(x => x.GardinerSigns).ToArray();
                     if (gardinersWithId.Length > 1)
                     {
-                        var countDict = CountDictionary.Generate(gardinersWithId);
-                        var maxVal = countDict.Values.Max();
-                        var bestCandidate = countDict.Where(x => x.Value == maxVal).Select(x => x.Key).ToArray();
-                        if (bestCandidate.Length == 1)
+                        var bestCandidateOccurrances = gardinersWithId.Select(x => gardinerCounts[x]);
+                        var candidateOccurrancesDiffFromIdOccurances = bestCandidateOccurrances.Select(x => Math.Abs(idCount - x));
+                        var lowestError = candidateOccurrancesDiffFromIdOccurances.Min();
+                        var entriesWithLowestError = gardinersWithId.Where(x => Math.Abs(idCount - gardinerCounts[x]) == lowestError);
+
+                        if (entriesWithLowestError.Count() == 1 || entriesWithLowestError.ToHashSet().Count == 1)
                         {
-                            return bestCandidate.Single();
+                            return entriesWithLowestError.First();
                         }
                         else
                         {
-                            var bestCandidateOccurrances = bestCandidate.Select(x => gardinerCounts[x]);
-                            var candidateOccurrancesDiffFromIdOccurances = bestCandidateOccurrances.Select(x => Math.Abs(entriesWithId.Count() - x));
-                            var lowestError = candidateOccurrancesDiffFromIdOccurances.Min();
-                            var entriesWithLowestError = bestCandidate.Where(x => Math.Abs(entriesWithId.Count() - gardinerCounts[x]) == lowestError);
-
-                            if (entriesWithLowestError.Count() == 1)
+                            if (idCount == 1)
                             {
-                                return entriesWithLowestError.Single();
-                            }
-                            else
-                            {
-                                if (entriesWithId.Count() == 1)
+                                var entr = entriesWithId.Single();
+                                if (entriesWithLowestError.Contains(entr.GardinerSigns[entr.GardinerSigns.Length - 1])
+                                 && entr.GlyphBlocks[entr.GlyphBlocks.Length - 1].Size == 1)
                                 {
-                                    var entr = entriesWithId.Single();
-                                    if (entriesWithLowestError.Contains(entr.GardinerSigns[entr.GardinerSigns.Length - 1])
-                                     && entr.GlyphBlocks[entr.GlyphBlocks.Length - 1].Size == 1)
+                                    var lastBlock = entr.GlyphBlocks[entr.GlyphBlocks.Length - 1];
+                                    var image = entr.Images.Where(x => x.Id == id).Single();
+                                    if (entr.Images.Last().Id == image.Id)
                                     {
-                                        var lastBlock = entr.GlyphBlocks[entr.GlyphBlocks.Length - 1];
-                                        var image = entr.Images.Where(x => x.Id == id).Single();
-                                        if (entr.Images.Last().Id == image.Id)
-                                        {
-                                            return entr.GardinerSigns[entr.GardinerSigns.Length - 1];
-                                        }
-                                        else
-                                        {
-                                            return entriesWithLowestError.Where(x => x != entr.GardinerSigns[entr.GardinerSigns.Length - 1]).Single();
-                                        }
+                                        return entr.GardinerSigns[entr.GardinerSigns.Length - 1];
                                     }
-                                    else if (entr.GlyphBlocks.Where(x => x.Size == 1).Count() == entr.GlyphBlocks.Length)
+                                    else
                                     {
-                                        for (int i = 0; i < entr.GlyphBlocks.Length; i++)
+                                        return entriesWithLowestError.Where(x => x != entr.GardinerSigns[entr.GardinerSigns.Length - 1]).Single();
+                                    }
+                                }
+                                else if (entr.GlyphBlocks.Where(x => x.Size == 1).Count() == entr.GlyphBlocks.Length)
+                                {
+                                    for (int i = 0; i < entr.GlyphBlocks.Length; i++)
+                                    {
+                                        if (entr.GlyphBlocks[i].Images[0].Id == id)
                                         {
-                                            if (entr.GlyphBlocks[i].Images[0].Id == id)
-                                            {
-                                                return entr.GardinerSigns[i];
-                                            }
-                                            else if (entr.Images[i].Id == id)
-                                            {
-                                                return entr.GardinerSigns[i];
-                                            }
+                                            return entr.GardinerSigns[i];
+                                        }
+                                        else if (entr.Images[i].Id == id)
+                                        {
+                                            return entr.GardinerSigns[i];
                                         }
                                     }
                                 }
@@ -158,8 +160,6 @@ namespace DatasetGenerator.Services
             }
             else
             {
-                var entriesWithId = entries.Where(x => x.Images.Select(y => y.Id).Contains(id));
-                var gardinersWithId = entriesWithId.SelectMany(x => x.GardinerSigns).ToArray();
                 if (gardinersWithId.Length > 1)
                 {
                     var countDict = CountDictionary.Generate(gardinersWithId);
@@ -179,27 +179,24 @@ namespace DatasetGenerator.Services
         {
             Dictionary<string, string> idMap = new Dictionary<string, string>();
             var imagesByEntry = pageData.EntryData.Select(x => x.Images);
-            foreach (var entryImages in imagesByEntry)
-            {
-                foreach (var imageWrapper in entryImages)
-                {
-                    var matching = vygusPaintedImages.Where(x => Math.Abs(x.Position.X - imageWrapper.X) <= 0.5
-                                                              && Math.Abs(x.Position.Y - imageWrapper.Y) <= 0.5)
-                                                     .Single().Image.Id;
-                    idMap.Add(imageWrapper.Id, matching);
-                    imageWrapper.AddId(matching);
-
-                }
-            }
             foreach (var entry in pageData.EntryData)
             {
-                foreach (var block in entry.GlyphBlocks)
+                var imagesInEntry = entry.Images;
+
+                foreach (var imageWrapper in imagesInEntry)
                 {
-                    foreach (var image in block.Images)
+                    var matching = vygusPaintedImages.Where(x => Math.Abs(x.Position.X - imageWrapper.X) <= 0.5
+                                                                && Math.Abs(x.Position.Y - imageWrapper.Y) <= 0.5)
+                                                        .Single().Image.Id;
+
+                    var glyphBlocksToAmend = entry.GlyphBlocks.SelectMany(x => x.Images).Where(x => x.Id == imageWrapper.Id);
+                    foreach (var block in glyphBlocksToAmend)
                     {
-                        image.AddId(idMap[image.Id]);
+                        block.Id = matching;
                     }
+                    imageWrapper.AddId(matching);
                 }
+
             }
         }
     }

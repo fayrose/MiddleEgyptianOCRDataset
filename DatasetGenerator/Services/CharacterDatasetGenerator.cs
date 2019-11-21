@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 
 namespace DatasetGenerator
 {
@@ -19,13 +20,24 @@ namespace DatasetGenerator
         public void SaveCharacterFilesFromPdf(Dictionary<string, string> characterMap)
         {
             var images = GetCharacterSetFromPdf();
+            HashSet<string> duplicateTracker = new HashSet<string>();
+            List<string> badIds = new List<string>();
 
             for (int i = 0; i < images.Count(); i++)
             {
                 string glyphName = characterMap[images[i].Id];
-                Console.WriteLine("Saving glyph " + glyphName + "...");
-                images[i].Save(Path.Combine(OutputDirectory, glyphName));
+                if (duplicateTracker.Add(glyphName))
+                {
+                    Console.WriteLine("Saving glyph " + glyphName + "...");
+                    images[i].Save(Path.Combine(OutputDirectory, glyphName));
+                }
+                else
+                {
+                    badIds.Add(images[i].Id);
+                }
             }
+            File.WriteAllText(@"C:\Users\lfr2l\U of T\CSC420\project\dataset\badIds.json", JsonSerializer.Serialize(badIds));
+            Console.WriteLine("Done!");
         }
 
         public PdfImage[] GetCharacterSetFromPdf()
