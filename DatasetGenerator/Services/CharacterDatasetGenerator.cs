@@ -40,6 +40,14 @@ namespace DatasetGenerator
             Console.WriteLine("Done!");
         }
 
+        public void SaveCharacterFileFromPdf(string glyphId, string glyphName)
+        {
+            var images = GetCharacterSetFromPdf();
+            var imageWithId = images.Where(x => x.Id == glyphId);
+            var firstImageWithId = imageWithId.First();
+            firstImageWithId.Save(Path.Combine(OutputDirectory, glyphName));
+        }
+
         public PdfImage[] GetCharacterSetFromPdf()
         {
             return Pdf.GetImages().ToArray();
