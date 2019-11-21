@@ -47,7 +47,7 @@ namespace DatasetGenerator
         /// </summary>
         /// <param name="fileName"></param>
         /// <returns></returns>
-        private int GetPageNumberFromFileName(string fileName)
+        public static int GetPageNumberFromFileName(string fileName)
         {   
             int indexOfPeriod = fileName.IndexOf("Aug");
 

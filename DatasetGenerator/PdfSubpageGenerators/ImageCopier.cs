@@ -11,15 +11,13 @@ namespace DatasetGenerator
     class ImageCopier
     {
         private readonly PdfPage Page;
-        public List<LineCoordinates> LineLocations;
 
-        public ImageCopier(PdfPage page, List<LineCoordinates> lineLocations)
+        public ImageCopier(PdfPage page)
         {
             Page = page;
-            LineLocations = lineLocations;
         }
 
-        private void GenerateLineImage(LineCoordinates coords, string outPath)
+        public void GenerateLineImage(string outPath, double width, string outfileName)
         {
             using Bitmap bm = new Bitmap((int)Page.Width, (int)Page.Height);
             bm.SetResolution(Page.Canvas.Resolution, Page.Canvas.Resolution);
@@ -28,9 +26,10 @@ namespace DatasetGenerator
             graphics.SmoothingMode = SmoothingMode.HighQuality;
             graphics.PageUnit = GraphicsUnit.Point;
 
-            var clipBox = new RectangleF((float)0.0, (float)coords.LineTop, (float)Page.Width, (float)coords.LineHeight);
 
-            //Page.CropBox = new PdfBox(0, coords.LineBottom, Page.Width, coords.LineTop);
+            var clipBox = new RectangleF((float)0.0, (float)Page.CropBox.Top, (float)width, (float)Page.CropBox.Height);
+
+            //Page.CropBox = new PdfBox(0, Page.CropBox.Bottom, width,Page.CropBox.Top);
             graphics.SetClip(clipBox, CombineMode.Intersect);
 
             foreach (PdfPageObject obj in Page.GetObjects())
@@ -51,7 +50,7 @@ namespace DatasetGenerator
                 }
             }
 
-            bm.Save(outPath, ImageFormat.Png);
+            bm.Save(outPath + "/"+ outfileName + ".Tiff", ImageFormat.Tiff);
         }
 
         private void drawPath(Graphics graphics, PdfPath path)

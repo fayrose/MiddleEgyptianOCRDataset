@@ -29,7 +29,7 @@ namespace DatasetGenerator.Services
             for (int i = 0; i < entry.GlyphBlocks.Length; i++)
             {
                 var block = entry.GlyphBlocks[i];
-                var formattedBlock = GlyphBlockFormatter.Format(block, gardiner[offset..block.Size]);
+                var formattedBlock = GlyphBlockFormatter.Format(block, gardiner[offset..(offset+block.Size)]);
                 formattedBlocks.Add('(' + formattedBlock + ')');
                 offset += block.Size;
             }
