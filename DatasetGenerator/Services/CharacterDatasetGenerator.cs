@@ -36,7 +36,10 @@ namespace DatasetGenerator
                     badIds.Add(images[i].Id);
                 }
             }
-            File.WriteAllText(@"C:\Users\lfr2l\U of T\CSC420\project\dataset\badIds.json", JsonSerializer.Serialize(badIds));
+            foreach (var badId in badIds)
+            {
+                Console.WriteLine(String.Format("Bad ID: {0}", badId));
+            }
             Console.WriteLine("Done!");
         }
 
