@@ -13,7 +13,7 @@ namespace DatasetGenerator
             BitMiracle.Docotic.LicenseManager.AddLicenseData("7GO0J-1HDYO-297Q3-OJDM0-PE4WW");
 
             var inLocation = @"C:\Users\lfr2l\U of T\NML340\VYGUS_Dictionary_2018.pdf";
-            var outFolder = @"C:\Users\lfr2l\U of T\CSC420\project\dataset\entry_images";
+            var outFolder = @"C:\Users\lfr2l\source\repos\DatasetGenerator\entry_images";
             var dataFolder = @"C:\Users\lfr2l\U of T\CSC420\project\dataset\aug_output";
 
             var jsonString = File.ReadAllText("data.json");

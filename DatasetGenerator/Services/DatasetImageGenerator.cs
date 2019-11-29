@@ -1,6 +1,7 @@
 ﻿using BitMiracle.Docotic.Pdf;
 using System;
 using System.IO;
+using System.Linq;
 
 namespace DatasetGenerator
 {
@@ -32,13 +33,19 @@ namespace DatasetGenerator
                 
                 for (int i = 0; i < doc.PageCount; i++)
                 {
-                    var outFileName = String.Format("page{0}_entry{1}.tiff", pageNum, i);
-                    var entry = Data.Pages[pageNum - 1].EntryData[i];
-                    double clippedRight = entry.WordBounds[entry.WordBounds.Length - 1] + 5;
-                    doc.Pages[i].CropBox = new PdfBox(doc.Pages[i].CropBox.Left, doc.Pages[i].CropBox.Bottom, clippedRight, doc.Pages[i].CropBox.Top);
-                    doc.Pages[i].Save(Path.Combine(OutputLocation, outFileName), options);
+                    GetImageFromEntry(pageNum, i, options, doc);
                 }
             }
+        }
+
+        private void GetImageFromEntry(int pageNum, int i, PdfDrawOptions options, PdfDocument doc)
+        {
+            var outFileName = String.Format("page{0}_entry{1}.tiff", pageNum, i);
+            var entry = Data.Pages[pageNum - 1].EntryData[i];
+            var imageWithLargestRight = entry.Images.Max(x => x.X + x.Width);
+            double clippedRight = Math.Max(entry.WordBounds[entry.WordBounds.Length - 1], imageWithLargestRight) + 15;
+            doc.Pages[i].CropBox = new PdfBox(doc.Pages[i].CropBox.Left, doc.Pages[i].CropBox.Bottom, clippedRight, doc.Pages[i].CropBox.Top);
+            doc.Pages[i].Save(Path.Combine(OutputLocation, outFileName), options);
         }
     }
 }
