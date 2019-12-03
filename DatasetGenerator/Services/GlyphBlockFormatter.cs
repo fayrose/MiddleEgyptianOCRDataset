@@ -30,6 +30,36 @@ namespace DatasetGenerator
         {
             double i = Math.Max(block.Images[0].X + block.Images[0].Width, block.Images[1].X + block.Images[1].Width);
             List<ImageData> imagesYSort = block.Images.OrderBy(image => image.Y).ToList();
+            List<List<ImageData>> innerBlocks = new List<List<ImageData>>();
+
+            foreach(ImageData data in imagesYSort)
+            {
+                if(innerBlocks.Count == 0)
+                {
+                    List<ImageData> dataList = new List<ImageData>();
+                    dataList.Append(data);
+                    innerBlocks.Append(dataList);
+                    continue;
+                }
+                List<ImageData> lastBlock = innerBlocks.Last();
+                ImageData lastBlockLowestGlyph = lastBlock.OrderBy(data => data.Y + data.Height).ToList().Last();
+                if (data.Y < lastBlockLowestGlyph.Y + lastBlockLowestGlyph.Height)
+                {
+                    lastBlock.Append(data);
+                }
+                else
+                {
+                    List<ImageData> imageDatas = new List<ImageData>();
+                    imageDatas.Append(data);
+                    innerBlocks.Append(imageDatas);
+                }
+            }
+
+            foreach(List<ImageData> dataList in innerBlocks)
+            {
+                List<ImageData> lrSort = dataList.OrderBy(data => data.X).ToList();
+
+            }
 
             if (i > block.Images[2].X || i > block.Images[3].X)
             {
