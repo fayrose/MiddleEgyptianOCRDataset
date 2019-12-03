@@ -10,6 +10,10 @@ namespace DatasetGenerator
     {
         public static string Format(GlyphBlock block, string[] gardinerSignsInBlockInOrder)
         {
+            if (block.Size != gardinerSignsInBlockInOrder.Length)
+            {
+                return "";
+            }
             switch (block.Size) 
             {
                 case 1:
@@ -22,7 +26,7 @@ namespace DatasetGenerator
                     return FourGlyphCase(block, gardinerSignsInBlockInOrder);
 
                 default:
-                    throw new ArgumentException("Block has invalid number of glyphs.");
+                    return "";
             }
         }
 
@@ -31,36 +35,48 @@ namespace DatasetGenerator
             double i = Math.Max(block.Images[0].X + block.Images[0].Width, block.Images[1].X + block.Images[1].Width);
             List<ImageData> imagesYSort = block.Images.OrderBy(image => image.Y).ToList();
             List<List<ImageData>> innerBlocks = new List<List<ImageData>>();
-
             foreach(ImageData data in imagesYSort)
             {
                 if(innerBlocks.Count == 0)
                 {
                     List<ImageData> dataList = new List<ImageData>();
-                    dataList.Append(data);
-                    innerBlocks.Append(dataList);
+                    dataList.Add(data);
+                    innerBlocks.Add(dataList);
                     continue;
                 }
                 List<ImageData> lastBlock = innerBlocks.Last();
                 ImageData lastBlockLowestGlyph = lastBlock.OrderBy(data => data.Y + data.Height).ToList().Last();
                 if (data.Y < lastBlockLowestGlyph.Y + lastBlockLowestGlyph.Height)
                 {
-                    lastBlock.Append(data);
+                    lastBlock.Add(data);
                 }
                 else
                 {
                     List<ImageData> imageDatas = new List<ImageData>();
-                    imageDatas.Append(data);
-                    innerBlocks.Append(imageDatas);
+                    imageDatas.Add(data);
+                    innerBlocks.Add(imageDatas);
                 }
             }
-
-            foreach(List<ImageData> dataList in innerBlocks)
+            string output = "";
+            //var manuelDeCodage = String.Join('-', formattedBlocks);
+            foreach (List<ImageData> dataList in innerBlocks)
             {
+                if(output != "")
+                {
+                    output += ":";
+                }
                 List<ImageData> lrSort = dataList.OrderBy(data => data.X).ToList();
+                List<string> gards = new List<string>();
+                foreach (ImageData data in lrSort)
+                {
+                    gards.Add(data.GardinerSign);
+                }
 
+                output += "("+ String.Join('-', gards) + ")";
             }
-
+            output = "(" + output + ")";
+            return output;
+            /*
             if (i > block.Images[2].X || i > block.Images[3].X)
             {
                 double yi = Math.Max(imagesYSort[0].X + imagesYSort[0].Height, imagesYSort[1].X + imagesYSort[1].Height);
@@ -87,7 +103,7 @@ namespace DatasetGenerator
             }
 
 
-            /*
+            
              * If images in block have similar y-values and different x-values:
              *     - Return gardiner IDs joined by '*'
              *     - First is gardiners[0], second is gardiners[1]
