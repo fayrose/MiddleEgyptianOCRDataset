@@ -2,7 +2,7 @@
   "profiles": {
     "DatasetGenerator": {
       "commandName": "Project",
-      "workingDirectory": "C:\\Users\\lfr2l\\source\\repos\\DatasetGenerator\\DatasetGenerator"
+      "workingDirectory": "C:\\Users\\Tom-H\\Documents\\CSC420\\Visual_Vygus\\DatasetGenerator"
     }
   }
 }

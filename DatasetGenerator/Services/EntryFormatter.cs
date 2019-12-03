@@ -8,6 +8,7 @@ namespace DatasetGenerator.Services
 {
     class EntryFormatter
     {
+        public static int brokens = 0;
         public static void FormatDictionary(DictionaryData data)
         {
             foreach (var page in data.Pages)
@@ -24,19 +25,50 @@ namespace DatasetGenerator.Services
             int offset = 0;
             var gardiner = entry.GardinerSigns.ToArray();
             List<string> formattedBlocks = new List<string>();
-
+            bool broken = false;
             // Split Gardiners according to gardiner blocks
             for (int i = 0; i < entry.GlyphBlocks.Length; i++)
             {
                 var block = entry.GlyphBlocks[i];
-                var formattedBlock = GlyphBlockFormatter.Format(block, gardiner[offset..(offset+block.Size)]);
+                List<ImageData> fixedBlockImages = new List<ImageData>();
+                foreach (ImageData gBlock in block.Images)
+                {
+                    if(gBlock.GardinerSign != null)
+                    {
+                        fixedBlockImages.Add(gBlock);
+                    }
+                    else
+                    {
+                        broken = true;
+                        break;
+                    }
+                }
+                block.Images = fixedBlockImages;
+                if (offset + fixedBlockImages.Count > gardiner.Length)
+                {
+                    broken = true;
+                    break;
+                }
+                var formattedBlock = GlyphBlockFormatter.Format(block, gardiner[offset..(offset + fixedBlockImages.Count)]);
+                if (formattedBlock == "")
+                {
+                    broken = true;
+                    break;
+                }
                 formattedBlocks.Add('(' + formattedBlock + ')');
                 offset += block.Size;
             }
 
+            if (broken)
+            {
+                entry.ManuelDeCodage = null;
+                EntryFormatter.brokens += 1;
+                return;
+            }
+
             var manuelDeCodage = String.Join('-', formattedBlocks);
 
-            ValidateEntry(manuelDeCodage, entry.GardinerSigns);
+            //ValidateEntry(manuelDeCodage, entry.GardinerSigns);
             entry.ManuelDeCodage = manuelDeCodage;
         }
 
